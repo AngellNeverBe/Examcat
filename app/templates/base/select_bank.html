@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block title %}切换题库 | {{ config.TITLE }}{% endblock %}
+
+{% block content %}
+<div class="page-title">
+    <h1>📂 题库管理</h1>
+    <p>选择或上传您的题库文件</p>
+</div>
+<!-- Current bank info -->
+<div class="current-bank-info">
+    <h2>
+        <span>当前使用题库:</span>
+        <span class="bank-name">{{ current_bank }}</span>
+    </h2>
+    <p>切换到其他题库将保留您的学习进度和统计数据，不同题库的题目是独立的。</p>
+</div>
+
+<!-- Available banks grid -->
+<h2 style="margin-bottom: 20px; color: #2c3e50;">可用题库</h2>
+
+{% if banks %}
+<div class="banks-grid">
+    {% for bank in banks %}
+    <div class="bank-card {% if bank.is_current %}current{% endif %} {% if bank.needs_loading %}needs-loading{% endif %}">
+        <div class="bank-header">
+            <div class="bank-name">📁 {{ bank.name }}</div>
+            <div class="bank-status {% if bank.is_current %}current{% else %}available{% endif %}">
+                {% if bank.is_current %}当前使用{% else %}可用{% endif %}
+            </div>
+            {% if bank.needs_loading %}
+            <div class="bank-status warning" style="background-color: #ffc107; color: #856404; margin-left: 8px;">
+                需加载
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="bank-stats">
+            <div class="stat-item">
+                <span class="stat-value">{{ bank.total }}</span>
+                <span class="stat-label">题目总数</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">{{ bank.answered }}</span>
+                <span class="stat-label">已答题目</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value">
+                    {{ bank.progress_percentage }}%
+                </span>
+                <span class="stat-label">完成进度</span>
+            </div>
+        </div>
+        
+        <!-- Progress bar -->
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: {{ bank.progress_percentage|int }}%"></div>
+        </div>
+        
+        <div class="bank-actions">
+            {% if not bank.is_current %}
+            <form action="{{ url_for('banks.load_bank') }}" method="POST" style="flex: 1;">
+                <input type="hidden" name="bank_name" value="{{ bank.name }}">
+                <button type="submit" class="btn btn-primary">
+                    {% if bank.needs_loading %}
+                    加载并使用
+                    {% else %}
+                    切换到该题库
+                    {% endif %}
+                </button>
+            </form>
+            
+            <form action="{{ url_for('banks.delete_bank') }}" method="POST" style="flex: 1;">
+                <input type="hidden" name="bank_name" value="{{ bank.name }}">
+                <button type="submit" class="btn btn-danger" 
+                        onclick="return confirm('确定要删除题库 {{ bank.name }} 吗？这将删除该题库的所有题目和相关记录。')">
+                    删除
+                </button>
+            </form>
+            {% else %}
+            <button class="btn btn-primary" disabled>当前使用中</button>
+            <button class="btn btn-secondary" disabled>不可删除</button>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="empty-state-icon">📂</div>
+    <h3>暂无题库</h3>
+    <p>请上传您的第一个题库文件</p>
+</div>
+{% endif %}
+
+<!-- 添加调试信息（可选，正式环境可以删除） -->
+{% if debug %}
+<div style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 5px; font-family: monospace; font-size: 12px;">
+    <h4>调试信息：</h4>
+    {% for bank in banks %}
+    <p>{{ bank.name }}: total={{ bank.total }}, answered={{ bank.answered }}, progress={{ bank.progress_percentage }}, needs_loading={{ bank.needs_loading }}</p>
+    {% endfor %}
+</div>
+{% endif %}
+<!-- Upload new bank -->
+<div class="upload-container">
+    <div class="upload-section">
+        <h2>📤 上传新题库</h2>
+        <form action="{{ url_for('banks.upload_bank') }}" method="POST" enctype="multipart/form-data" class="upload-form">
+            <div class="form-group">
+                <label for="bank_file">选择CSV文件</label>
+                <input type="file" id="bank_file" name="bank_file" accept=".csv" class="form-control file-input" required>
+                <div class="help-text">
+                    支持的格式：CSV文件，需要包含以下列：题号, 题干, A, B, C, D, E, 答案, 难度, 题型, 类别
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="height: fit-content;">上传题库</button>
+        </form>
+    </div>
+
+    <!-- Instructions -->
+    <div class="upload-section">
+        <h2>📋 使用说明</h2>
+        <div style="line-height: 1.8;">
+            <p><strong>题库文件格式要求：</strong></p>
+            <ul style="margin-left: 20px; margin-bottom: 15px;">
+                <li>必须为CSV格式（逗号分隔值）文件</li>
+                <li>第一行必须包含以下列标题：</li>
+                <li>题号, 题干, A, B, C, D, E, 答案, 难度, 题型, 类别</li>
+                <li>文件编码建议使用UTF-8</li>
+            </ul>
+            
+            <p><strong>题库切换说明：</strong></p>
+            <ul style="margin-left: 20px;">
+                <li>每个题库的学习进度和统计数据是独立的</li>
+                <li>切换到新题库不会影响其他题库的数据</li>
+                <li>可以同时管理多个题库，随时切换使用</li>
+                <li>删除题库将永久删除该题库的所有数据</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/select_bank.css') }}">
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/select_bank.js') }}"></script>
+{% endblock %}

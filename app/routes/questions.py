@@ -1,0 +1,388 @@
+"""
+examcat - 题目路由蓝图
+"""
+import random
+from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
+from ..utils.auth import login_required, get_user_id
+from ..utils.questions import fetch_question, random_question_id, is_favorite
+from ..utils.database import get_db, get_current_bank, get_current_question_id, extract_qid_number, get_next_question_id
+
+questions_bp = Blueprint('questions', __name__, template_folder='../templates/base')
+
+@questions_bp.route('/random', methods=['GET'])
+@login_required
+def random_question():
+    """Route to get a random question."""
+    user_id = get_user_id()
+    current_bank = get_current_bank(user_id)
+    qid = random_question_id(user_id)
+    
+    conn = get_db()
+    c = conn.cursor()
+    # Get total questions count for current bank
+    c.execute('SELECT COUNT(*) as total FROM questions WHERE bank_name = ?', (current_bank,))
+    total = c.fetchone()['total']
+    # Get answered questions count for current bank
+    c.execute('''
+        SELECT COUNT(DISTINCT h.question_id) as answered 
+        FROM history h 
+        JOIN questions q ON h.question_id = q.id 
+        WHERE h.user_id = ? AND q.bank_name = ?
+    ''', (user_id, current_bank))
+    answered = c.fetchone()['answered']
+    conn.close()
+    
+    if not qid:
+        flash("您已完成当前题库所有题目！可以重置历史以重新开始，或切换其他题库。", "info")
+        return render_template('question.html', 
+                              question=None, 
+                              answered=answered, 
+                              total=total,
+                              current_bank=current_bank)
+        
+    q = fetch_question(qid)
+    is_fav = is_favorite(user_id, qid)
+    
+    return render_template('question.html', 
+                          question=q, 
+                          answered=answered, 
+                          total=total,
+                          is_favorite=is_fav,
+                          current_bank=current_bank)
+
+@questions_bp.route('/question/<qid>', methods=['GET', 'POST'])
+@login_required
+def show(qid):
+    """Route to view and answer a specific question."""
+    user_id = get_user_id()
+    current_bank = get_current_bank(user_id)
+    q = fetch_question(qid)
+    
+    if q is None:
+        flash("题目不存在", "error")
+        return redirect(url_for('main.index'))
+
+    # Check if the question belongs to current bank before updating
+    if q.get('bank_name') == current_bank:
+        # Update current_seq_qid only if the question belongs to current bank
+        conn = get_db()
+        c = conn.cursor()
+        c.execute('UPDATE users SET current_seq_qid = ? WHERE id = ?', (qid, user_id))
+        conn.commit()
+        conn.close()
+
+    # Handle form submission (answer)
+    if request.method == 'POST':
+        user_answer = request.form.getlist('answer')
+        user_answer_str = "".join(sorted(user_answer))
+        correct = int(user_answer_str == "".join(sorted(q['answer'])))
+
+        # Save answer to history
+        conn = get_db()
+        c = conn.cursor()
+        c.execute(
+            'INSERT INTO history (user_id, question_id, user_answer, correct) VALUES (?,?,?,?)',
+            (user_id, qid, user_answer_str, correct)
+        )
+        
+        # Get updated stats for current bank
+        c.execute('SELECT COUNT(*) AS total FROM questions WHERE bank_name = ?', (current_bank,))
+        total = c.fetchone()['total']
+        c.execute('''
+            SELECT COUNT(DISTINCT h.question_id) AS answered 
+            FROM history h 
+            JOIN questions q ON h.question_id = q.id 
+            WHERE h.user_id = ? AND q.bank_name = ?
+        ''', (user_id, current_bank))
+        answered = c.fetchone()['answered']
+        
+        conn.commit()
+        conn.close()
+
+        result_msg = "回答正确" if correct else f"回答错误，正确答案：{q['answer']}"
+        flash(result_msg, "success" if correct else "error")
+        
+        is_fav = is_favorite(user_id, qid)
+        
+        return render_template('question.html',
+                              question=q,
+                              result_msg=result_msg,
+                              answered=answered,
+                              total=total,
+                              is_favorite=is_fav,
+                              current_bank=current_bank)
+
+    # Handle GET request
+    conn = get_db()
+    c = conn.cursor()
+    c.execute('SELECT COUNT(*) AS total FROM questions WHERE bank_name = ?', (current_bank,))
+    total = c.fetchone()['total']
+    c.execute('''
+        SELECT COUNT(DISTINCT h.question_id) AS answered 
+        FROM history h 
+        JOIN questions q ON h.question_id = q.id 
+        WHERE h.user_id = ? AND q.bank_name = ?
+    ''', (user_id, current_bank))
+    answered = c.fetchone()['answered']
+    conn.close()
+    
+    is_fav = is_favorite(user_id, qid)
+
+    return render_template('question.html',
+                          question=q,
+                          answered=answered,
+                          total=total,
+                          is_favorite=is_fav,
+                          current_bank=current_bank)
+
+@questions_bp.route('/history')
+@login_required
+def show_history():
+    """Route to view answer history."""
+    user_id = get_user_id()
+    current_bank = get_current_bank(user_id)
+    
+    conn = get_db()
+    c = conn.cursor()
+    c.execute('''
+        SELECT h.* FROM history h 
+        JOIN questions q ON h.question_id = q.id 
+        WHERE h.user_id = ? AND q.bank_name = ? 
+        ORDER BY h.timestamp DESC
+    ''', (user_id, current_bank))
+    rows = c.fetchall()
+    conn.close()
+    
+    history_data = []
+    for r in rows:
+        q = fetch_question(r['question_id'])
+        stem = q['stem'] if q else '题目已删除'
+        history_data.append({
+            'id': r['id'],
+            'question_id': r['question_id'],
+            'stem': stem,
+            'user_answer': r['user_answer'],
+            'correct': r['correct'],
+            'timestamp': r['timestamp']
+        })
+    
+    return render_template('history.html', 
+                          history=history_data,
+                          current_bank=current_bank)
+
+@questions_bp.route('/search', methods=['GET', 'POST'])
+@login_required
+def search():
+    """Route to search for questions by keyword."""
+    user_id = get_user_id()
+    current_bank = get_current_bank(user_id)
+    query = request.form.get('query', '')
+    results = []
+    
+    if query:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT * FROM questions WHERE bank_name = ? AND stem LIKE ?", 
+                  (current_bank, '%'+query+'%'))
+        rows = c.fetchall()
+        conn.close()
+        
+        for row in rows:
+            q = {
+                'id': row['id'],
+                'stem': row['stem']
+            }
+            results.append(q)
+    
+    return render_template('search.html', 
+                          query=query, 
+                          results=results,
+                          current_bank=current_bank)
+
+@questions_bp.route('/wrong')
+@login_required
+def wrong_questions():
+    """Route to view wrong answers."""
+    user_id = get_user_id()
+    current_bank = get_current_bank(user_id)
+    
+    conn = get_db()
+    c = conn.cursor()
+    c.execute('''
+        SELECT h.question_id FROM history h 
+        JOIN questions q ON h.question_id = q.id 
+        WHERE h.user_id = ? AND h.correct = 0 AND q.bank_name = ?
+    ''', (user_id, current_bank))
+    rows = c.fetchall()
+    conn.close()
+    
+    wrong_ids = set(r['question_id'] for r in rows)
+    questions_list = []
+    
+    for qid in wrong_ids:
+        q = fetch_question(qid)
+        if q:
+            questions_list.append(q)
+    
+    return render_template('wrong.html', 
+                          questions=questions_list,
+                          current_bank=current_bank)
+
+@questions_bp.route('/only_wrong')
+@login_required
+def only_wrong_mode():
+    """Route to practice only wrong questions."""
+    user_id = get_user_id()
+    current_bank = get_current_bank(user_id)
+    
+    conn = get_db()
+    c = conn.cursor()
+    c.execute('''
+        SELECT h.question_id FROM history h 
+        JOIN questions q ON h.question_id = q.id 
+        WHERE h.user_id = ? AND h.correct = 0 AND q.bank_name = ?
+    ''', (user_id, current_bank))
+    rows = c.fetchall()
+    conn.close()
+    
+    wrong_ids = [r['question_id'] for r in rows]
+    
+    if not wrong_ids:
+        flash("当前题库没有错题或还未答题", "info")
+        return redirect(url_for('main.index'))
+    
+    qid = random.choice(wrong_ids)
+    q = fetch_question(qid)
+    is_fav = is_favorite(user_id, qid)
+    
+    return render_template('question.html', 
+                          question=q, 
+                          is_favorite=is_fav,
+                          current_bank=current_bank)
+
+@questions_bp.route('/sequential_start')
+@login_required
+def sequential_start():
+    """Route to start or continue sequential answering mode."""
+    user_id = get_user_id()
+    
+    # Use get_current_question_id to ensure the question belongs to current bank
+    current_qid = get_current_question_id(user_id)
+    
+    if current_qid is None:
+        flash("当前题库中没有题目或无法获取题目！", "error")
+        return redirect(url_for('main.index'))
+    
+    return redirect(url_for('questions.show_sequential_question', qid=current_qid))
+
+@questions_bp.route('/sequential/<qid>', methods=['GET', 'POST'])
+@login_required
+def show_sequential_question(qid):
+    """Route to show and handle sequential questions."""
+    user_id = get_user_id()
+    current_bank = get_current_bank(user_id)
+    q = fetch_question(qid)
+    
+    if q is None:
+        flash("题目不存在", "error")
+        return redirect(url_for('main.index'))
+
+    # Verify the question belongs to current bank
+    if q.get('bank_name') != current_bank:
+        # If not, get the correct question for current bank
+        correct_qid = get_current_question_id(user_id)
+        if correct_qid:
+            flash("已切换到当前题库的正确题目位置", "info")
+            return redirect(url_for('questions.show_sequential_question', qid=correct_qid))
+        else:
+            flash("当前题库中没有题目", "error")
+            return redirect(url_for('main.index'))
+
+    next_qid = None
+    result_msg = None
+    user_answer_str = ""
+    
+    conn = get_db()
+    c = conn.cursor()
+    
+    # Update current_seq_qid to the current question
+    c.execute('UPDATE users SET current_seq_qid = ? WHERE id = ?', (qid, user_id))
+    conn.commit()
+    
+    # Handle POST request (user submitted an answer)
+    if request.method == 'POST':
+        user_answer = request.form.getlist('answer')
+        user_answer_str = "".join(sorted(user_answer))
+        correct = int(user_answer_str == "".join(sorted(q['answer'])))
+        
+        # Save answer to history
+        c.execute('INSERT INTO history (user_id, question_id, user_answer, correct, bank_name) '
+                  'VALUES (?,?,?,?,?)',
+                  (user_id, qid, user_answer_str, correct, current_bank))
+        
+        next_qid = get_next_question_id(conn, user_id, current_bank)
+        
+        if next_qid:
+            # 更新current_seq_qid为下一题
+            c.execute('UPDATE users SET current_seq_qid = ? WHERE id = ?',
+                      (next_qid, user_id))
+        else:
+            # 没有找到下一题，清空current_seq_qid
+            c.execute('UPDATE users SET current_seq_qid = NULL WHERE id = ?',
+                      (user_id,))
+            flash("当前题库没有更多题目", "info")
+        
+        result_msg = "回答正确！" if correct else f"回答错误，正确答案：{q['answer']}"
+        flash(result_msg, "success" if correct else "error")
+        conn.commit()
+    
+    # 在GET请求时也计算下一题ID（用于显示"下一题"链接）
+    if request.method == 'GET':
+        
+        # 获取当前题库所有题目
+        c.execute('SELECT id FROM questions WHERE bank_name = ?', (current_bank,))
+        all_questions = [row['id'] for row in c.fetchall()]
+        
+        if all_questions:
+            # 按数字部分排序
+            all_questions.sort(key=extract_qid_number)
+            
+            # 找到当前题目在列表中的位置
+            try:
+                current_index = all_questions.index(qid)
+                # 计算下一个题目的索引
+                if current_index + 1 < len(all_questions):
+                    next_qid = all_questions[current_index + 1]
+                else:
+                    # 已经是最后一题，循环到第一题
+                    next_qid = all_questions[0]
+            except ValueError:
+                # 当前题目不在列表中（不应该发生），返回第一个题目
+                next_qid = all_questions[0]
+    
+    # Get progress statistics for current bank
+    c.execute('SELECT COUNT(*) AS total FROM questions WHERE bank_name = ?', (current_bank,))
+    total = c.fetchone()['total']
+    
+    c.execute('''
+        SELECT COUNT(DISTINCT h.question_id) AS answered 
+        FROM history h 
+        JOIN questions q ON h.question_id = q.id 
+        WHERE h.user_id = ? AND q.bank_name = ?
+    ''', (user_id, current_bank))
+    answered = c.fetchone()['answered']
+    
+    conn.close()
+    
+    is_fav = is_favorite(user_id, qid)
+    
+    return render_template('question.html',
+                          question=q,
+                          result_msg=result_msg,
+                          next_qid=next_qid,
+                          sequential_mode=True,
+                          user_answer=user_answer_str,
+                          answered=answered,
+                          total=total,
+                          is_favorite=is_fav,
+                          current_bank=current_bank)
