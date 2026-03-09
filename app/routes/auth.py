@@ -1,9 +1,10 @@
 """
 examcat - 认证路由蓝图
 """
+import os
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash
 from werkzeug.security import generate_password_hash, check_password_hash
-from ..utils.database import get_db, get_first_bank, load_questions_to_db
+from ..utils.database import get_db, get_first_bank, load_questions_to_db, setup_db_logger, db_logger
 from ..utils.auth import login_required, is_logged_in, get_user_id, admin_required, verify_admin_credentials, is_admin, ADMIN_CREDENTIALS
 
 auth_bp = Blueprint('auth', __name__, template_folder='../templates/base_auth')
@@ -54,6 +55,7 @@ def register():
         c.execute('INSERT INTO users (username, password_hash, current_bank) VALUES (?,?,?)', 
                   (username, password_hash, first_bank))
         conn.commit()
+        db_logger.info(f"[{os.getpid()}] register: 用户{username}")
         
         flash("注册成功，请登录", "success")
         return redirect(url_for('auth.login'))
@@ -117,10 +119,10 @@ def login():
             c.execute('SELECT COUNT(*) as cnt FROM questions WHERE bank_name = ?', (current_bank,))
             if c.fetchone()['cnt'] == 0:
                 load_questions_to_db(conn, current_bank)
-            
-            
 
             flash("管理员登录成功", "success")
+            db_logger.info(f"[{os.getpid()}] login: 管理员{username}")
+
             # Redirect to 'next' parameter if provided
             next_page = request.args.get('next')
             if next_page and next_page.startswith('/'):
@@ -160,9 +162,8 @@ def login():
             if c.fetchone()['cnt'] == 0:
                 load_questions_to_db(conn, current_bank)
             
-            
-            
             flash("登录成功", "success")
+            db_logger.info(f"[{os.getpid()}] login: 用户{username}")
             
             # Redirect to 'next' parameter if provided
             next_page = request.args.get('next')
@@ -172,8 +173,6 @@ def login():
             return redirect(url_for('main.index'))
         else:
             flash("登录失败，用户名或密码错误", "error")
-            
-        
             
     return render_template('login.html')
 

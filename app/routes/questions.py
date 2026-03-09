@@ -1,11 +1,12 @@
 """
 examcat - 题目路由蓝图
 """
+import os
 import random
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 from ..utils.auth import login_required, get_user_id
 from ..utils.questions import fetch_question, random_question_id, is_favorite
-from ..utils.database import get_db, get_current_bank, get_current_question_id, extract_qid_number, get_next_question_id
+from ..utils.database import get_db, get_current_bank, get_current_question_id, extract_qid_number, get_next_question_id, db_logger
 
 questions_bp = Blueprint('questions', __name__, template_folder='../templates/base')
 
@@ -60,6 +61,8 @@ def show(qid):
     
     if q is None:
         flash("题目不存在", "error")
+        db_logger.error(f"[{os.getpid()}] questions.show: 用户{user_id}, 题目{qid}")
+
         return redirect(url_for('main.index'))
 
     # Check if the question belongs to current bank before updating
@@ -84,6 +87,7 @@ def show(qid):
             'INSERT INTO history (user_id, question_id, user_answer, correct) VALUES (?,?,?,?)',
             (user_id, qid, user_answer_str, correct)
         )
+        db_logger.info(f"[{os.getpid()}] Add history: 用户{user_id}, 题目{qid}, 答案{user_answer_str}, 正确{correct}")
         
         # Get updated stats for current bank
         c.execute('SELECT COUNT(*) AS total FROM questions WHERE bank_name = ?', (current_bank,))
@@ -96,8 +100,7 @@ def show(qid):
         ''', (user_id, current_bank))
         answered = c.fetchone()['answered']
         
-        conn.commit()
-        
+        conn.commit()       
 
         result_msg = "回答正确" if correct else f"回答错误，正确答案：{q['answer']}"
         flash(result_msg, "success" if correct else "error")
@@ -151,7 +154,6 @@ def show_history():
         ORDER BY h.timestamp DESC
     ''', (user_id, current_bank))
     rows = c.fetchall()
-    
     
     history_data = []
     for r in rows:
@@ -285,6 +287,8 @@ def show_sequential_question(qid):
     
     if q is None:
         flash("题目不存在", "error")
+        db_logger.error(f"[{os.getpid()}] questions.show_sq: 用户{user_id}, 题目{qid}")
+
         return redirect(url_for('main.index'))
 
     # Verify the question belongs to current bank
@@ -319,6 +323,7 @@ def show_sequential_question(qid):
         c.execute('INSERT INTO history (user_id, question_id, user_answer, correct, bank_name) '
                   'VALUES (?,?,?,?,?)',
                   (user_id, qid, user_answer_str, correct, current_bank))
+        db_logger.info(f"[{os.getpid()}] Add history: 用户{user_id}, 题目{qid}, 答案{user_answer_str}, 正确{correct}")
         
         next_qid = get_next_question_id(conn, user_id, current_bank)
         

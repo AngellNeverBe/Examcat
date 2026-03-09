@@ -6,6 +6,8 @@ import json
 import os
 import glob
 import csv
+import logging
+import time
 from functools import wraps
 from flask import session, request, redirect, url_for, flash, g
 
@@ -25,6 +27,8 @@ def get_db():
         g.db.execute('PRAGMA busy_timeout = 5000;')   # 超时等待5秒
         g.db.execute('PRAGMA synchronous = NORMAL;')  # 平衡速度和安全
         g.db.execute('PRAGMA cache_size = -10000;')   # 10MB内存缓存
+
+        # db_logger.info(f"[{os.getpid()}] Connect db.")
     
     return g.db
 
@@ -34,7 +38,9 @@ def close_db(e=None):
     """
     db = g.pop('db', None)
     if db is not None:
+
         db.close()
+        # db_logger.info(f"[{os.getpid()}] Connection closed.")
 
 def init_app(app):
     """
@@ -205,8 +211,10 @@ def add_history_record(user_id, question_id, user_answer, correct, bank_name):
             (user_id, question_id, user_answer, correct, bank_name)
         )
         conn.commit()
+        db_logger.info(f"[{os.getpid()}] add_history_record: 用户{user_id}, 题目{question_id}, 答案{user_answer}, 正确{correct}, 题库{bank_name}")
     except Exception as e:
         print(f"Error adding history record: {e}")
+        db_logger.error(f"[{os.getpid()}] add_history_record: 用户{user_id}, 题目{question_id}, 错误: {str(e)}")
         conn.rollback()
         raise
         
@@ -521,3 +529,58 @@ def extract_qid_number(qid):
     except ValueError:
         # 如果无法转换为数字，返回0确保排序在最后
         return 0
+
+# ================= 数据库日志配置 =================
+def setup_db_logger():
+    """设置数据库专用日志记录器"""
+    # 创建日志目录（如果不存在）
+    log_dir = '/var/log/examcat'
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir, exist_ok=True)
+    
+    # 创建数据库专用日志记录器
+    db_logger = logging.getLogger('examcat.database')
+    db_logger.setLevel(logging.INFO)  # 记录INFO及以上级别的日志
+    
+    # 避免重复添加处理器
+    if not db_logger.handlers:
+        # 创建文件处理器
+        log_file = os.path.join(log_dir, 'database.log')
+        file_handler = logging.FileHandler(log_file, encoding='utf-8')
+        file_handler.setLevel(logging.INFO)
+        
+        # 设置日志格式
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S'
+        )
+        file_handler.setFormatter(formatter)
+        
+        # 添加到记录器
+        db_logger.addHandler(file_handler)
+    
+    return db_logger
+# 创建全局数据库日志记录器
+db_logger = setup_db_logger()
+# 简单的SQL执行计时装饰器
+def log_sql_operation(func):
+    """装饰器：记录SQL执行时间和结果"""
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        try:
+            result = func(*args, **kwargs)
+            duration = (time.time() - start_time) * 1000  # 转换为毫秒
+            
+            # 只记录耗时超过50ms的查询（避免日志太多）
+            if duration > 50:
+                # 提取SQL语句（如果是execute方法）
+                sql = args[1] if len(args) > 1 else '未知SQL'
+                db_logger.info(f"[{os.getpid()}] 慢查询: {sql[:100]}... 耗时: {duration:.2f}ms")
+            
+            return result
+        except Exception as e:
+            duration = (time.time() - start_time) * 1000
+            db_logger.error(f"SQL错误: {str(e)} 耗时: {duration:.2f}ms")
+            raise e
+    return wrapper
+# ===============================================

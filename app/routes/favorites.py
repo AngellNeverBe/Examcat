@@ -1,9 +1,10 @@
 """
 examcat - 收藏路由蓝图
 """
+import os
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 from ..utils.auth import login_required, get_user_id, is_logged_in
-from ..utils.database import get_db, get_current_bank
+from ..utils.database import get_db, get_current_bank, db_logger
 from ..utils.questions import fetch_question, is_favorite
 
 favorites_bp = Blueprint('favorites', __name__, url_prefix='/favorites', template_folder='../templates/base')
@@ -63,16 +64,20 @@ def add(qid):
         c.execute('SELECT id FROM questions WHERE id = ?', (qid,))
         if not c.fetchone():
             flash("题目不存在", "error")
+            db_logger.error(f"[{os.getpid()}] favorites.add: 用户{user_id}, 题目{qid}")
+
             return redirect(request.referrer or url_for('main.index'))
         
         # 添加收藏
         c.execute('INSERT OR IGNORE INTO favorites (user_id, question_id, tag) VALUES (?,?,?)',
                   (user_id, qid, ''))
+        db_logger.info(f"[{os.getpid()}] Add favorites: 用户{user_id}, 题目{qid}")
+
         conn.commit()
         flash("收藏成功！", "success")
     except Exception as e:
         flash(f"收藏失败: {str(e)}", "error")
-        
+        db_logger.error(f"[{os.getpid()}] favorites.add: 用户{user_id}, 题目{qid}, 错误{e}")
     
     # 重定向回原页面
     referrer = request.referrer
@@ -92,11 +97,13 @@ def remove(qid):
     try:
         c.execute('DELETE FROM favorites WHERE user_id=? AND question_id=?', 
                   (user_id, qid))
+        db_logger.info(f"[{os.getpid()}] Remove favorites: 用户{user_id}, 题目{qid}")
+
         conn.commit()
         flash("已取消收藏", "success")
     except Exception as e:
         flash(f"取消收藏失败: {str(e)}", "error")
-        
+        db_logger.error(f"[{os.getpid()}] favorites.remove: 用户{user_id}, 题目{qid}, 错误{e}")        
     
     # 重定向回原页面
     referrer = request.referrer
@@ -124,7 +131,6 @@ def update_tag(qid):
         return jsonify({"success": True, "msg": "标记更新成功"})
     except Exception as e:
         return jsonify({"success": False, "msg": f"更新失败: {str(e)}"}), 500
-        
 
 @favorites_bp.route('/by_tag/<tag>')
 @login_required
@@ -155,8 +161,6 @@ def by_tag(tag):
             'difficulty': r['difficulty'],
             'type': r['qtype']
         })
-    
-    
     
     return render_template('favorites_by_tag.html',
                           tag=tag,
