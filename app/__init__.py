@@ -9,6 +9,10 @@ def create_app(config_name=None):
     """应用工厂函数，用于创建Flask应用实例"""
     app = Flask(__name__)
     
+    # 注册数据库初始化管理
+    from .utils.database import init_app as init_db_app
+    init_db_app(app)
+
     # 加载配置
     if config_name is None:
         config_name = os.getenv('FLASK_CONFIG', 'development')
@@ -48,7 +52,11 @@ def create_app(config_name=None):
         return {
             'config': app.config,  # 注入整个config对象
             'app_title': app.config.get('TITLE', 'Examcat'),
-            'card_info': app.config.get('CARD_INFO', 'Examcat 正式上线')
+            'card_info': app.config.get('CARD_INFO', 'Examcat 正式上线'),
+            'atk_enabled': app.config.get('ARTALK_ENABLED', True),
+            'atk_server': app.config.get('ARTALK_SERVER'),
+            'atk_site': app.config.get('ARTALK_SITE_NAME'),
+            'atk_locale': app.config.get('ARTALK_LOCALE', 'zh-CN'),
         }
     
     return app

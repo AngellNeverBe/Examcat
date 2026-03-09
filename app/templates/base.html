@@ -20,6 +20,9 @@
     
     <!-- 额外样式 -->
     {% block styles %}{% endblock %}
+
+    <!-- Artalk -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/artalk/2.9.1/Artalk.css">    
 </head>
 <body>
     <!-- 导航栏 -->
@@ -114,6 +117,8 @@
     
     <!-- JavaScript文件 -->
     <script src="{{ url_for('static', filename='js/base.js') }}" defer></script>
+    <!-- Artalk -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/artalk/2.9.1/Artalk.js" defer></script>
     <script>
         (function() {
             const currentYear = new Date().getFullYear();

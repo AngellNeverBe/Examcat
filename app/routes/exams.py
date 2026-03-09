@@ -21,7 +21,7 @@ def modes():
     c = conn.cursor()
     c.execute('SELECT COUNT(*) as total FROM questions WHERE bank_name = ?', (current_bank,))
     total = c.fetchone()['total']
-    conn.close()
+    
     
     return render_template('index.html', 
                           mode_select=True, 
@@ -66,8 +66,7 @@ def start_timed():
     except Exception as e:
         flash(f"启动定时模式失败: {str(e)}", "error")
         return redirect(url_for('main.index'))
-    finally:
-        conn.close()
+        
 
 @exams_bp.route('/timed_mode')
 @login_required
@@ -84,7 +83,7 @@ def timed_mode():
     c = conn.cursor()
     c.execute('SELECT * FROM exam_sessions WHERE id=? AND user_id=?', (exam_id, user_id))
     exam = c.fetchone()
-    conn.close()
+    
     
     if not exam:
         flash("无法找到考试会话", "error")
@@ -119,7 +118,7 @@ def submit_timed_mode():
     exam = c.fetchone()
     
     if not exam:
-        conn.close()
+        
         flash("无法找到考试会话", "error")
         return redirect(url_for('main.index'))
     
@@ -150,7 +149,7 @@ def submit_timed_mode():
     score = (correct_count / total * 100) if total > 0 else 0
     c.execute('UPDATE exam_sessions SET completed=1, score=? WHERE id=?', (score, exam_id))
     conn.commit()
-    conn.close()
+    
     
     # Clear session
     session.pop('current_exam_id', None)
@@ -196,8 +195,7 @@ def start_exam():
     except Exception as e:
         flash(f"启动模拟考试失败: {str(e)}", "error")
         return redirect(url_for('main.index'))
-    finally:
-        conn.close()
+        
 
 @exams_bp.route('/exam')
 @login_required
@@ -214,7 +212,7 @@ def exam():
     c = conn.cursor()
     c.execute('SELECT * FROM exam_sessions WHERE id=? AND user_id=?', (exam_id, user_id))
     exam = c.fetchone()
-    conn.close()
+    
     
     if not exam:
         flash("无法找到考试", "error")
@@ -244,7 +242,7 @@ def submit_exam():
     exam = c.fetchone()
     
     if not exam:
-        conn.close()
+        
         return jsonify({
             "success": False,
             "msg": "无法找到考试"
@@ -287,7 +285,7 @@ def submit_exam():
     score = (correct_count / total * 100) if total > 0 else 0
     c.execute('UPDATE exam_sessions SET completed=1, score=? WHERE id=?', (score, exam_id))
     conn.commit()
-    conn.close()
+    
     
     # Clear session
     session.pop('current_exam_id', None)

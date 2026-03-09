@@ -40,7 +40,7 @@ def register():
         # Check if username exists
         c.execute('SELECT id FROM users WHERE username=?', (username,))
         if c.fetchone():
-            conn.close()
+            
             flash("用户名已存在，请更换用户名", "error")
             return render_template('register.html')
         
@@ -54,7 +54,7 @@ def register():
         c.execute('INSERT INTO users (username, password_hash, current_bank) VALUES (?,?,?)', 
                   (username, password_hash, first_bank))
         conn.commit()
-        conn.close()
+        
         flash("注册成功，请登录", "success")
         return redirect(url_for('auth.login'))
         
@@ -88,7 +88,7 @@ def login():
                         (username, ADMIN_CREDENTIALS[username], first_bank))
                 conn.commit()
                 flash("管理员第一次登录，信息已记录，请重新登录", "success")
-                conn.close()
+                
                 return redirect(url_for('auth.login'))
             
             print(user['id'])
@@ -118,7 +118,7 @@ def login():
             if c.fetchone()['cnt'] == 0:
                 load_questions_to_db(conn, current_bank)
             
-            conn.close()
+            
 
             flash("管理员登录成功", "success")
             # Redirect to 'next' parameter if provided
@@ -160,7 +160,7 @@ def login():
             if c.fetchone()['cnt'] == 0:
                 load_questions_to_db(conn, current_bank)
             
-            conn.close()
+            
             
             flash("登录成功", "success")
             
@@ -173,7 +173,7 @@ def login():
         else:
             flash("登录失败，用户名或密码错误", "error")
             
-        conn.close()
+        
             
     return render_template('login.html')
 

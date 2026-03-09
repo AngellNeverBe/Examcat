@@ -7,7 +7,7 @@ import os
 import glob
 import csv
 from functools import wraps
-from flask import session, request, redirect, url_for, flash
+from flask import session, request, redirect, url_for, flash, g
 
 def get_db():
     """
@@ -16,9 +16,31 @@ def get_db():
     Returns:
         sqlite3.Connection: The configured database connection
     """
-    conn = sqlite3.connect('database.db')
-    conn.row_factory = sqlite3.Row
-    return conn
+    if 'db' not in g:
+        
+        g.db = sqlite3.connect('database.db', timeout=20.0)
+        g.db.row_factory = sqlite3.Row
+        
+        g.db.execute('PRAGMA journal_mode=WAL;')      # WAL模式
+        g.db.execute('PRAGMA busy_timeout = 5000;')   # 超时等待5秒
+        g.db.execute('PRAGMA synchronous = NORMAL;')  # 平衡速度和安全
+        g.db.execute('PRAGMA cache_size = -10000;')   # 10MB内存缓存
+    
+    return g.db
+
+def close_db(e=None):
+    """
+    请求结束后的数据库自动关闭
+    """
+    db = g.pop('db', None)
+    if db is not None:
+        db.close()
+
+def init_app(app):
+    """
+    上下文处理
+    """
+    app.teardown_appcontext(close_db)
 
 def migrate_database():
     """
@@ -56,7 +78,7 @@ def migrate_database():
         c.execute('ALTER TABLE history ADD COLUMN bank_name TEXT')
     
     conn.commit()
-    conn.close()
+    
     
     # Migrate existing history records to have bank_name
     migrate_history_data()
@@ -89,8 +111,6 @@ def migrate_history_data():
     except Exception as e:
         print(f"Error migrating history data: {e}")
         conn.rollback()
-    finally:
-        conn.close()
 
 def init_db():
     """
@@ -160,7 +180,7 @@ def init_db():
     )''')
     
     conn.commit()
-    conn.close()
+    
     
     # Run database migration to add new columns if needed
     migrate_database()
@@ -189,8 +209,7 @@ def add_history_record(user_id, question_id, user_answer, correct, bank_name):
         print(f"Error adding history record: {e}")
         conn.rollback()
         raise
-    finally:
-        conn.close()
+        
 
 def get_available_banks():
     """
@@ -246,7 +265,7 @@ def get_current_bank(user_id):
     c = conn.cursor()
     c.execute('SELECT current_bank FROM users WHERE id = ?', (user_id,))
     row = c.fetchone()
-    conn.close()
+    
     
     if row and row['current_bank']:
         # Check if the bank exists in questions-bank folder
@@ -289,7 +308,7 @@ def set_current_bank(user_id, bank_name):
         c.execute('UPDATE users SET current_seq_qid = ? WHERE id = ?', (next_qid, user_id))
     
     conn.commit()
-    conn.close()
+    
 
 def load_questions_to_db(conn, bank_name):
     """
@@ -360,7 +379,7 @@ def load_all_banks():
     for bank in banks:
         load_questions_to_db(conn, bank)
     
-    conn.close()
+    
 
 def get_questions_by_bank(conn, bank_name):
     """
@@ -390,7 +409,7 @@ def get_current_question_id(user_id):
     row = c.fetchone()
     if not row:
         print('yes')
-        conn.close()
+        
         return None
     
     bank_name = row['current_bank']
@@ -403,7 +422,7 @@ def get_current_question_id(user_id):
         if next_qid:
             c.execute('UPDATE users SET current_seq_qid = ? WHERE id = ?', (next_qid, user_id))
             conn.commit()
-        conn.close()
+        
         return next_qid
     
     # 检查current_qid是否属于当前题库
@@ -411,7 +430,7 @@ def get_current_question_id(user_id):
     q_row = c.fetchone()
     if q_row and q_row['bank_name'] == bank_name:
         # 当前题目ID有效
-        conn.close()
+        
         return current_qid
     else:
         # 当前题目ID不属于当前题库，重新计算
@@ -419,7 +438,7 @@ def get_current_question_id(user_id):
         if next_qid:
             c.execute('UPDATE users SET current_seq_qid = ? WHERE id = ?', (next_qid, user_id))
             conn.commit()
-        conn.close()
+        
         return next_qid
 
 def get_next_question_id(conn, user_id, bank_name):
@@ -472,7 +491,7 @@ def get_bank_progress(user_id, bank_name):
     answered_row = c.fetchone()
     answered = answered_row['answered'] if answered_row else 0
     
-    conn.close()
+    
     
     # 计算进度百分比
     progress = answered / total if total > 0 else 0

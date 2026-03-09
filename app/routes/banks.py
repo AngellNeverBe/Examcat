@@ -84,7 +84,7 @@ def select_bank():
             'progress_percentage': round((answered / total * 100), 2) if total > 0 else 0
         })
     
-    conn.close()
+    
     
     return render_template('select_bank.html', 
                           banks=bank_stats,
@@ -113,7 +113,7 @@ def load_bank():
         # Load questions from the selected bank
         conn = get_db()
         load_questions_to_db(conn, bank_name)
-        conn.close()
+        
         
         flash(f"已切换到题库: {bank_name}", "success")
     except Exception as e:
@@ -148,7 +148,7 @@ def upload_bank():
         # Load the new bank into database
         conn = get_db()
         load_questions_to_db(conn, file.filename)
-        conn.close()
+        
         
         flash(f"题库 {file.filename} 上传成功", "success")
     except Exception as e:
@@ -204,7 +204,7 @@ def delete_bank():
         ''', (bank_name,))
         
         conn.commit()
-        conn.close()
+        
         
         # Delete the file
         # 确保bank_name有.csv后缀来查找文件
@@ -247,7 +247,7 @@ def auto_load_all_banks():
             except Exception as e:
                 print(f"加载题库 {bank} 时出错: {e}")
     
-    conn.close()
+    
     
     if loaded_count > 0:
         flash(f"已自动加载 {loaded_count} 个题库", "success")

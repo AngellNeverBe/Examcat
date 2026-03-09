@@ -89,7 +89,7 @@ def index():
         'categories': get_distinct_values(c, 'category', current_bank)
     }
     
-    conn.close()
+    
     
     # 计算分页信息
     total_pages = (total + per_page - 1) // per_page
@@ -175,7 +175,7 @@ def filter():
             'category': row['category']
         })
     
-    conn.close()
+    
     
     return render_template('filter.html',
                           filters=filters,
@@ -235,7 +235,7 @@ def by_category(category):
             'is_favorite': is_favorite(user_id, row['id'])
         })
     
-    conn.close()
+    
     
     # 计算分页信息
     total_pages = (total + per_page - 1) // per_page
@@ -286,7 +286,7 @@ def by_difficulty(difficulty):
             'is_favorite': is_favorite(user_id, row['id'])
         })
     
-    conn.close()
+    
     
     # 计算分页信息
     total_pages = (total + per_page - 1) // per_page

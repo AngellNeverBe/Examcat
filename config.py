@@ -14,8 +14,14 @@ class Config:
 
     """个性化配置"""
     TITLE = 'Examcat'
-    CARD_INFO = 'Examcat 1.0 版本正式启动！<br>这是一个多题库刷题软件，完善了原先的ExamMaster多个功能，并重构了项目结构。<br>欢迎您提出宝贵的意见！这里是俺的 <a href="https://blog.paraisland.top" class="footer-link" target="_blank" rel="noopener noreferrer">blog</a> 和 <a href="https://github.com/AngellNeverBe" class="footer-link" target="_blank" rel="noopener noreferrer">GitHub</a>，欢迎参观！'
+    CARD_INFO = 'Examcat 1.1 版本更新！现在集成了artalk评论系统！<br>这是一个多题库刷题软件，完善了原先的ExamMaster多个功能，并重构了项目结构。<br>欢迎您提出宝贵的意见！这里是俺的 <a href="https://blog.paraisland.top" class="footer-link" target="_blank" rel="noopener noreferrer">blog</a> 和 <a href="https://github.com/AngellNeverBe" class="footer-link" target="_blank" rel="noopener noreferrer">GitHub</a>，欢迎参观！'
     
+    """ Artalk """
+    ARTALK_ENABLED = True                             # 是否启用 Artalk
+    ARTALK_SERVER = 'https://artalk.paraisland.top'   # Artalk 后端地址
+    ARTALK_SITE_NAME = 'Examcat'                      # 站点名称
+    ARTALK_LOCALE = 'zh-CN'                           # 语言设置
+
     @staticmethod
     def init_app(app):
         pass

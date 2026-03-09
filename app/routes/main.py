@@ -53,7 +53,7 @@ def reset_history():
         # 注意：这里设置为NULL，下次调用get_current_question_id时会自动计算新的题目ID
         c.execute('UPDATE users SET current_seq_qid = NULL WHERE id = ?', (user_id,))
         conn.commit()
-        conn.close()
+        
         flash("当前题库答题历史已重置。现在您可以重新开始答题。", "success")
     except Exception as e:
         flash(f"重置历史时出错: {str(e)}", "error")

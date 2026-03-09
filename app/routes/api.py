@@ -46,8 +46,6 @@ def get_questions():
             'category': row['category']
         })
     
-    conn.close()
-    
     return jsonify({
         'success': True,
         'data': questions,
@@ -115,8 +113,7 @@ def submit_answer():
         INSERT INTO history (user_id, question_id, user_answer, correct) 
         VALUES (?,?,?,?)
     ''', (user_id, question_id, user_answer_str, 1 if is_correct else 0))
-    conn.commit()
-    conn.close()
+    conn.commit()    
     
     return jsonify({
         'success': True,
@@ -150,8 +147,6 @@ def get_statistics():
     correct_count = stats['correct_count'] or 0
     
     overall_accuracy = (correct_count / total_answered * 100) if total_answered > 0 else 0
-    
-    conn.close()
     
     return jsonify({
         'success': True,
@@ -189,8 +184,6 @@ def get_favorites():
             'stem': r['stem']
         })
     
-    conn.close()
-    
     return jsonify({
         'success': True,
         'data': favorites
@@ -215,8 +208,6 @@ def get_banks():
             'name': r['bank_name'],
             'question_count': r['question_count']
         })
-    
-    conn.close()
     
     return jsonify({
         'success': True,

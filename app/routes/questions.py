@@ -30,7 +30,7 @@ def random_question():
         WHERE h.user_id = ? AND q.bank_name = ?
     ''', (user_id, current_bank))
     answered = c.fetchone()['answered']
-    conn.close()
+    
     
     if not qid:
         flash("您已完成当前题库所有题目！可以重置历史以重新开始，或切换其他题库。", "info")
@@ -69,7 +69,7 @@ def show(qid):
         c = conn.cursor()
         c.execute('UPDATE users SET current_seq_qid = ? WHERE id = ?', (qid, user_id))
         conn.commit()
-        conn.close()
+        
 
     # Handle form submission (answer)
     if request.method == 'POST':
@@ -97,7 +97,7 @@ def show(qid):
         answered = c.fetchone()['answered']
         
         conn.commit()
-        conn.close()
+        
 
         result_msg = "回答正确" if correct else f"回答错误，正确答案：{q['answer']}"
         flash(result_msg, "success" if correct else "error")
@@ -124,7 +124,7 @@ def show(qid):
         WHERE h.user_id = ? AND q.bank_name = ?
     ''', (user_id, current_bank))
     answered = c.fetchone()['answered']
-    conn.close()
+    
     
     is_fav = is_favorite(user_id, qid)
 
@@ -151,7 +151,7 @@ def show_history():
         ORDER BY h.timestamp DESC
     ''', (user_id, current_bank))
     rows = c.fetchall()
-    conn.close()
+    
     
     history_data = []
     for r in rows:
@@ -185,7 +185,7 @@ def search():
         c.execute("SELECT * FROM questions WHERE bank_name = ? AND stem LIKE ?", 
                   (current_bank, '%'+query+'%'))
         rows = c.fetchall()
-        conn.close()
+        
         
         for row in rows:
             q = {
@@ -214,7 +214,7 @@ def wrong_questions():
         WHERE h.user_id = ? AND h.correct = 0 AND q.bank_name = ?
     ''', (user_id, current_bank))
     rows = c.fetchall()
-    conn.close()
+    
     
     wrong_ids = set(r['question_id'] for r in rows)
     questions_list = []
@@ -243,7 +243,7 @@ def only_wrong_mode():
         WHERE h.user_id = ? AND h.correct = 0 AND q.bank_name = ?
     ''', (user_id, current_bank))
     rows = c.fetchall()
-    conn.close()
+    
     
     wrong_ids = [r['question_id'] for r in rows]
     
@@ -372,7 +372,7 @@ def show_sequential_question(qid):
     ''', (user_id, current_bank))
     answered = c.fetchone()['answered']
     
-    conn.close()
+    
     
     is_fav = is_favorite(user_id, qid)
     

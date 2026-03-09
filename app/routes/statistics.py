@@ -115,7 +115,7 @@ def show():
             'duration': r['duration']
         })
     
-    conn.close()
+    
     
     return render_template('statistics.html', 
                           overall_accuracy=overall_accuracy,
@@ -139,7 +139,7 @@ def exam_detail(exam_id):
     exam = c.fetchone()
     
     if not exam:
-        conn.close()
+        
         flash("无法找到考试记录", "error")
         return redirect(url_for('statistics.show'))
     
@@ -152,7 +152,7 @@ def exam_detail(exam_id):
         if q:
             questions.append(q)
     
-    conn.close()
+    
     
     return render_template('exam_detail.html', 
                           exam=exam,

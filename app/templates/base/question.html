@@ -153,6 +153,26 @@
             {% endif %}
         </div>
     </form>
+    {% if  result_msg %}
+    <!-- Artalk 评论区（仅在答题后显示） -->
+        <h4 class="mb-1 mt-2">
+            <i class="fas fa-comments mr-2"></i>题目讨论
+            <small class="text-muted ml-2">共 <span class="artalk-comment-count">...</span> 条评论</small>
+        </h4>
+        <div id="Comments"></div>
+        <script type="module">
+            import Artalk from 'https://esm.sh/artalk@2.9.1'
+
+            Artalk.init({
+                el: '#Comments',
+                pageKey: '{{ question.id }}',
+                pageTitle: '{{ question.id }} | {{ config.TITLE }}',
+                server: '{{ config.ARTALK_SERVER }}',
+                site: '{{ config.ARTALK_SITE_NAME }}',
+                locale: '{{ config.ARTALK_LOCALE }}'
+            })
+        </script>
+    {% endif %}
 </div>
 
 {% else %}

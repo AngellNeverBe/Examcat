@@ -43,7 +43,7 @@ def show():
                 'category': r['category']
             })
     
-    conn.close()
+    
     
     return render_template('favorites.html', 
                           favorites=favorites_data,
@@ -72,8 +72,7 @@ def add(qid):
         flash("收藏成功！", "success")
     except Exception as e:
         flash(f"收藏失败: {str(e)}", "error")
-    finally:
-        conn.close()
+        
     
     # 重定向回原页面
     referrer = request.referrer
@@ -97,8 +96,7 @@ def remove(qid):
         flash("已取消收藏", "success")
     except Exception as e:
         flash(f"取消收藏失败: {str(e)}", "error")
-    finally:
-        conn.close()
+        
     
     # 重定向回原页面
     referrer = request.referrer
@@ -126,8 +124,7 @@ def update_tag(qid):
         return jsonify({"success": True, "msg": "标记更新成功"})
     except Exception as e:
         return jsonify({"success": False, "msg": f"更新失败: {str(e)}"}), 500
-    finally:
-        conn.close()
+        
 
 @favorites_bp.route('/by_tag/<tag>')
 @login_required
@@ -159,7 +156,7 @@ def by_tag(tag):
             'type': r['qtype']
         })
     
-    conn.close()
+    
     
     return render_template('favorites_by_tag.html',
                           tag=tag,
@@ -192,7 +189,7 @@ def tag_list():
             'count': r['count']
         })
     
-    conn.close()
+    
     
     return render_template('tag_list.html',
                           tags=tags,

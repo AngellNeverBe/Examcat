@@ -19,7 +19,7 @@ def fetch_question(qid):
     c = conn.cursor()
     c.execute('SELECT * FROM questions WHERE id=?', (qid,))
     row = c.fetchone()
-    conn.close()
+    
     
     if row:
         return {
@@ -58,7 +58,7 @@ def random_question_id(user_id):
         LIMIT 1
     ''', (current_bank, user_id))
     row = c.fetchone()
-    conn.close()
+    
     
     if row:
         return row['id']
@@ -82,7 +82,7 @@ def fetch_random_question_ids(num, user_id):
     c.execute('SELECT id FROM questions WHERE bank_name = ? ORDER BY RANDOM() LIMIT ?', 
               (current_bank, num))
     rows = c.fetchall()
-    conn.close()
+    
     return [r['id'] for r in rows]
 
 def is_favorite(user_id, question_id):
@@ -101,5 +101,5 @@ def is_favorite(user_id, question_id):
     c.execute('SELECT 1 FROM favorites WHERE user_id=? AND question_id=?',
               (user_id, question_id))
     is_fav = bool(c.fetchone())
-    conn.close()
+    
     return is_fav
