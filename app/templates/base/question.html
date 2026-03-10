@@ -25,7 +25,11 @@
         <div class="question-info">
             <span class="question-number">题 {{ question.id.rsplit('_', 1)[-1] }}</span>
             {% if sequential_mode %}
-                <span class="badge badge-secondary">顺序答题模式</span>
+                <span class="badge badge-secondary">刷题模式</span>
+            {% elif wrong_mode %}
+                <span class="badge badge-secondary">错题模式</span>
+            {% else %}
+                <span class="badge badge-secondary">错题模式</span>
             {% endif %}
             {% if question.type %}
                 <span class="badge badge-info">{{ question.type }}</span>
@@ -79,7 +83,11 @@
     
     <!-- 选项表单 -->
     <form method="post" 
-      action="{% if sequential_mode %}{{ url_for('questions.show_sequential_question', qid=question.id) }}{% else %}{{ url_for('questions.show', qid=question.id) }}{% endif %}" 
+      action="
+      {% if sequential_mode %}{{ url_for('questions.show_sequential_question', qid=question.id) }}
+      {% elif wrong_mode %}{{ url_for('questions.show_wrong_question', qid=question.id) }}
+      {% else %}{{ url_for('questions.show', qid=question.id) }}{% endif %}
+      " 
       class="question-form">
         <ul class="options-list">
             {% for opt_key, opt_val in question.options.items() %}
@@ -134,6 +142,25 @@
                             </a>
                         </div>
                     {% endif %}
+
+                {% elif wrong_mode %}
+                    {% if next_qid %}
+                        <div class="btn-group">
+                            <a href="{{ url_for('questions.show_wrong_question', qid=next_qid) }}" class="btn btn-primary">
+                                <i class="fas fa-arrow-right"></i> 下一错题 第 {{ next_qid.rsplit('_', 1)[-1] }} 题
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle"></i> 恭喜！您已完成所有错题！
+                        </div>
+                        <div class="btn-group">
+                            <a href="{{ url_for('main.index') }}" class="btn btn-primary">
+                                <i class="fas fa-home"></i> 返回首页
+                            </a>
+                        </div>
+                    {% endif %}
+
                 {% else %}
                     <div class="btn-group">
                         <a href="{{ url_for('questions.show_sequential_question', qid=question.id|int + 1) }}" class="btn btn-primary">
