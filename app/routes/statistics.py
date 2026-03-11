@@ -31,6 +31,7 @@ def show():
     row = c.fetchone()
     total = row['total'] if row['total'] else 0
     correct_count = row['correct_count'] if row['correct_count'] else 0
+    wrong_count = total - correct_count
     overall_accuracy = (correct_count/total*100) if total>0 else 0
     
     # 按难度统计
@@ -115,9 +116,10 @@ def show():
             'duration': r['duration']
         })
     
-    
-    
     return render_template('statistics.html', 
+                          total=total,
+                          correct_count=correct_count,
+                          wrong_count=wrong_count,
                           overall_accuracy=overall_accuracy,
                           difficulty_stats=difficulty_stats,
                           category_stats=category_stats,

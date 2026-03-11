@@ -35,7 +35,7 @@
                 <span class="badge badge-info">{{ question.type }}</span>
             {% endif %}
             {% if question.difficulty %}
-                <span class="question-difficulty badge {% if question.difficulty == '简单' %}badge-success{% elif question.difficulty == '中等' %}badge-warning{% else %}badge-danger{% endif %}">
+                <span class="question-difficulty badge {% if question.difficulty == '简单' %}badge-success{% elif question.difficulty == '中等' %}badge-warning{% elif question.difficulty == '困难' %}badge-danger{% else %}badge-none{% endif %}">
                     {{ question.difficulty }}
                 </span>
             {% endif %}
@@ -163,14 +163,14 @@
 
                 {% else %}
                     <div class="btn-group">
-                        <a href="{{ url_for('questions.show_sequential_question', qid=question.id|int + 1) }}" class="btn btn-primary">
+                        <a href="{{ url_for('questions.show', qid=next_qid) }}" class="btn btn-primary">
                             <i class="fas fa-arrow-right"></i> 顺序下一题
                         </a>
                         <a href="{{ url_for('questions.random_question') }}" class="btn btn-primary">
                             <i class="fas fa-random"></i> 随机下一题
                         </a>
                         <a href="{{ url_for('questions.sequential_start') }}" class="btn btn-outline-primary">
-                            <i class="fas fa-list-ol"></i> 顺序答题模式
+                            <i class="fas fa-list-ol"></i> 回到刷题模式
                         </a>
                         <a href="{{ url_for('main.index') }}" class="btn btn-outline-primary">
                             <i class="fas fa-home"></i> 返回首页

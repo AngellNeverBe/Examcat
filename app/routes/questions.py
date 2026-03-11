@@ -72,7 +72,20 @@ def show(qid):
         c = conn.cursor()
         c.execute('UPDATE users SET current_seq_qid = ? WHERE id = ?', (qid, user_id))
         conn.commit()
-        
+    
+    # Calculate next question ID
+    next_qid = None
+    try:
+        # Extract number from current question ID
+        current_number = extract_qid_number(qid)
+        if current_number:
+            # Convert to integer, add 1, and create new question ID
+            next_number = current_number + 1
+            next_qid = f"{current_bank}_{next_number}"
+    except (ValueError, TypeError) as e:
+        # Log error but continue execution
+        db_logger.warning(f"Error calculating next_qid for {qid}: {e}")
+        next_qid = None
 
     # Handle form submission (answer)
     if request.method == 'POST':
@@ -112,6 +125,7 @@ def show(qid):
                               result_msg=result_msg,
                               answered=answered,
                               total=total,
+                              next_qid=next_qid,  # 添加next_qid参数
                               is_favorite=is_fav,
                               current_bank=current_bank)
 
@@ -135,6 +149,7 @@ def show(qid):
                           question=q,
                           answered=answered,
                           total=total,
+                          next_qid=next_qid,
                           is_favorite=is_fav,
                           current_bank=current_bank)
 

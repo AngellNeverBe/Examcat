@@ -37,15 +37,7 @@
         </div>
         <div class="stat-label">已答题目</div>
         <div class="stat-value">
-            {% if difficulty_stats|length > 0 %}
-                {% set total_answered = 0 %}
-                {% for stat in difficulty_stats %}
-                    {% set total_answered = total_answered + stat.total %}
-                {% endfor %}
-                {{ total_answered }}
-            {% else %}
-                0
-            {% endif %}
+            {{ total }}
         </div>
     </div>
     
@@ -55,11 +47,7 @@
         </div>
         <div class="stat-label">错题数量</div>
         <div class="stat-value">
-            {% if worst_questions|length > 0 %}
-                {{ worst_questions|length }}
-            {% else %}
-                0
-            {% endif %}
+            {{ wrong_count }}
         </div>
     </div>
     

@@ -471,6 +471,7 @@ input[type="radio"] {
 .badge-danger { background-color: var(--danger-color); color: white; }
 .badge-warning { background-color: var(--warning-color); color: var(--gray-800); }
 .badge-info { background-color: var(--info-color); color: white; }
+.badge-none { background: var(--gray-600); color: white;}
 
 /* ====== 答题页面样式 ====== */
 .question-container {
