@@ -130,6 +130,8 @@
                                 {% endif %}
                                 {% if not question.is_correct %}
                                     | 正确答案: <strong>{{ correct_answer }}</strong>
+                                {% else %}
+                                    | <span class="text-success">回答正确</span>
                                 {% endif %}
                             </small>
                         </div>
