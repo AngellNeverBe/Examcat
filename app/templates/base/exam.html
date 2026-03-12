@@ -64,7 +64,8 @@
             <div class="card-body">
                 <form id="examForm" method="post" action="{{ url_for('exams.exam_main', exam_id=exam_id) }}" class="mb-4">
                     {% for question in questions %}
-                    <div class="question-container" id="question-{{ loop.index }}">
+                    <div class="question-container" id="question-{{ loop.index }}"
+                    {% if exam.completed %}data-is-correct="{{ 1 if question.is_correct else 0 }}"{% endif %}>
                         <div class="question-header">
 
                             <span class="question-number">题 {{ loop.index }}</span>

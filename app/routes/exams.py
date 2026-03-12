@@ -119,13 +119,23 @@ def exam_main(exam_id):
             if q:
                 # 获取用户已保存的答案（如果有）
                 user_answer = answers[idx] if idx < len(answers) else ''
+                correct_answer = q.get('answer', '')
+                
+                # 计算题目是否正确（如果考试已完成）
+                is_correct = False
+                if exam['completed']:
+                    user_answer_str = user_answer
+                    correct_answer_str = "".join(sorted(correct_answer))
+                    is_correct = user_answer_str == correct_answer_str
+                
                 questions.append({
                     'id': qid,
                     'stem': q['stem'],
                     'type': q['type'],
                     'options': q.get('options', []),
-                    'answer': user_answer,  # 用户已保存的答案
-                    'correct_answer': q.get('answer', '')  # 正确答案（用于提交后对比）
+                    'answer': user_answer,
+                    'correct_answer': correct_answer,
+                    'is_correct': is_correct  # 添加题目是否正确属性
                 })
         
         return render_template('exam.html', 

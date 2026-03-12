@@ -345,32 +345,16 @@ function initializePageState() {
         
         // 如果考试已完成，根据正确性更新格子状态
         if (config.examCompleted) {
-            // 检查是否有正确/错误标记
-            const correctCards = questionElement.querySelectorAll('.option-card.correct');
-            const incorrectCards = questionElement.querySelectorAll('.option-card.incorrect');
-            
-            // 获取题目类型
-            const firstOptionCard = questionElement.querySelector('.option-card');
-            const questionType = firstOptionCard ? firstOptionCard.dataset.questionType : '单选题';
-            
-            if (questionType === '单选题') {
-                // 单选题：只要有一个选项是错误的，就算错误
-                if (incorrectCards.length > 0) {
-                    updateQuestionGridStatus(i, 'incorrect');
-                } else if (correctCards.length > 0) {
-                    updateQuestionGridStatus(i, 'correct');
-                }
-            } else {
-                // 多选题：需要更复杂的判断
-                // 这里简化处理：如果所有已选选项都是正确的，且没有未选的正确选项，才算正确
-                const selectedCards = questionElement.querySelectorAll('.option-card.selected');
-                const hasIncorrect = incorrectCards.length > 0;
-                const allSelectedAreCorrect = selectedCards.length > 0 && selectedCards.length === correctCards.length;
-                
-                if (!hasIncorrect && allSelectedAreCorrect) {
-                    updateQuestionGridStatus(i, 'correct');
-                } else if (hasIncorrect) {
-                    updateQuestionGridStatus(i, 'incorrect');
+            // 优先使用 data-is-correct 属性
+            const questionContainer = document.getElementById(`question-${i}`);
+            if (questionContainer) {
+                const isCorrectAttr = questionContainer.getAttribute('data-is-correct');
+                if (isCorrectAttr !== null) {
+                    if (isCorrectAttr === '1') {
+                        updateQuestionGridStatus(i, 'correct');
+                    } else {
+                        updateQuestionGridStatus(i, 'incorrect');
+                    }
                 }
             }
         }
