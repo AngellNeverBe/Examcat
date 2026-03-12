@@ -197,7 +197,7 @@ def exam_main(exam_id):
                 exam_id
             ))
             db_logger.info(f"[{os.getpid()}] Submit exam: 用户{user_id}, ID{exam_id}, 完成{completed}")
-            
+            conn.commit()
             flash(f"考试提交成功！正确率：{correct_count}/{total} = {score:.2f}%", "success")
             return redirect(url_for('exams.exam_main', exam_id=exam_id))
             
@@ -221,7 +221,7 @@ def exam_main(exam_id):
             return jsonify({
                 'success': True,
                 'message': '答案已保存',
-                'category': 'info',  # 添加消息类型
+                'category': 'info',
                 'saved_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 'saved_answers': new_answers
             })

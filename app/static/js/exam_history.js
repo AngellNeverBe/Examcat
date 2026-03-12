@@ -1,7 +1,84 @@
 /**
- * 模态框管理器
- * 原生JavaScript实现的模态框组件
+ * 考试历史页面功能模块
  */
+
+// ==================== 筛选功能 ====================
+class ExamFilter {
+    constructor() {
+        this.filterAllBtn = document.getElementById('filter-all');
+        this.filterCompletedBtn = document.getElementById('filter-completed');
+        this.filterUnfinishedBtn = document.getElementById('filter-unfinished');
+        this.examRows = document.querySelectorAll('.exam-row');
+        
+        if (this.filterAllBtn && this.filterCompletedBtn && this.filterUnfinishedBtn) {
+            this.init();
+        }
+    }
+    
+    init() {
+        // 绑定按钮点击事件
+        this.filterAllBtn.addEventListener('click', () => this.updateFilter('all'));
+        this.filterCompletedBtn.addEventListener('click', () => this.updateFilter('completed'));
+        this.filterUnfinishedBtn.addEventListener('click', () => this.updateFilter('unfinished'));
+        
+        // 初始化：显示全部
+        this.updateFilter('all');
+    }
+    
+    updateFilter(selectedFilter) {
+        // 更新按钮状态
+        [this.filterAllBtn, this.filterCompletedBtn, this.filterUnfinishedBtn].forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        switch(selectedFilter) {
+            case 'all':
+                this.filterAllBtn.classList.add('active');
+                break;
+            case 'completed':
+                this.filterCompletedBtn.classList.add('active');
+                break;
+            case 'unfinished':
+                this.filterUnfinishedBtn.classList.add('active');
+                break;
+        }
+        
+        // 显示/隐藏行
+        this.examRows.forEach(row => {
+            const status = row.dataset.status;
+            
+            switch(selectedFilter) {
+                case 'all':
+                    row.style.display = '';
+                    break;
+                case 'completed':
+                    row.style.display = status === 'completed' ? '' : 'none';
+                    break;
+                case 'unfinished':
+                    row.style.display = status === 'unfinished' ? '' : 'none';
+                    break;
+            }
+        });
+        
+        // 更新行号
+        this.updateRowNumbers(selectedFilter);
+    }
+    
+    updateRowNumbers(selectedFilter) {
+        let visibleIndex = 1;
+        
+        this.examRows.forEach(row => {
+            const isVisible = row.style.display !== 'none';
+            const firstCell = row.querySelector('td:first-child');
+            
+            if (firstCell && isVisible) {
+                firstCell.textContent = visibleIndex++;
+            }
+        });
+    }
+}
+
+// ==================== 模态框 ====================
 class ModalManager {
     constructor() {
         this.modals = new Map();
@@ -522,6 +599,9 @@ class ExamDetailModal {
 
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', () => {
+    // 初始化筛选功能
+    const examFilter = new ExamFilter();
+    
     // 初始化模态框系统
     modalManager.init();
     
@@ -556,4 +636,6 @@ document.addEventListener('DOMContentLoaded', () => {
             modal.setContent(content);
         }
     };
+    // 导出筛选功能
+    window.ExamFilter = examFilter;
 });
