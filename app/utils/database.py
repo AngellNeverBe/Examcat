@@ -62,7 +62,7 @@ def migrate_database():
     except sqlite3.OperationalError:
         # Column doesn't exist, add it
         print("Adding current_bank column to users table...")
-        c.execute('ALTER TABLE users ADD COLUMN current_bank TEXT DEFAULT "questions"')  # 修改：去掉.csv后缀
+        c.execute('ALTER TABLE users ADD COLUMN current_bank TEXT DEFAULT "questions"')
     
     # Check if bank_name column exists in questions table
     try:
@@ -70,7 +70,7 @@ def migrate_database():
     except sqlite3.OperationalError:
         # Column doesn't exist, add it
         print("Adding bank_name column to questions table...")
-        c.execute('ALTER TABLE questions ADD COLUMN bank_name TEXT DEFAULT "questions"')  # 修改：去掉.csv后缀
+        c.execute('ALTER TABLE questions ADD COLUMN bank_name TEXT DEFAULT "questions"')
         
         # Update existing questions to have the default bank name
         c.execute('UPDATE questions SET bank_name = "questions" WHERE bank_name IS NULL')
@@ -83,8 +83,96 @@ def migrate_database():
         print("Adding bank_name column to history table...")
         c.execute('ALTER TABLE history ADD COLUMN bank_name TEXT')
     
-    conn.commit()
+    # ==================== 迁移 exam_sessions 表 ====================
+    # 检查 answers 列是否存在
+    try:
+        c.execute('SELECT answers FROM exam_sessions LIMIT 1')
+        answers_exists = True
+    except sqlite3.OperationalError:
+        answers_exists = False
+
+    # 检查 restart_time 列是否存在
+    try:
+        c.execute('SELECT restart_time FROM exam_sessions LIMIT 1')
+        restart_time_exists = True
+    except sqlite3.OperationalError:
+        restart_time_exists = False
     
+    # 检查 mode 列是否存在
+    try:
+        c.execute('SELECT mode FROM exam_sessions LIMIT 1')
+        mode_exists = True
+    except sqlite3.OperationalError:
+        mode_exists = False
+    
+    # 1. 添加 answers 列（如果不存在）
+    if not answers_exists:
+        print("Adding answers column to exam_sessions table...")
+        c.execute('ALTER TABLE exam_sessions ADD COLUMN answers TEXT DEFAULT "[]"')
+    
+    # 2. 添加 restart_time 列（如果不存在）
+    if not restart_time_exists:
+        print("Adding restart_time column to exam_sessions table...")
+        c.execute('ALTER TABLE exam_sessions ADD COLUMN restart_time DATETIME')
+        # 将现有记录的 restart_time 设置为 start_time
+        c.execute('UPDATE exam_sessions SET restart_time = start_time WHERE restart_time IS NULL')
+    
+    # 3. 删除 mode 列（如果存在）
+    if mode_exists:
+        print("Removing mode column from exam_sessions table...")
+        
+        # 获取当前最大id值，用于后续恢复自增序列
+        c.execute('SELECT MAX(id) as max_id FROM exam_sessions')
+        max_id_row = c.fetchone()
+        max_id = max_id_row['max_id'] if max_id_row and max_id_row['max_id'] is not None else 0
+        
+        # 创建临时表（不包含mode列，但包含answers列）
+        c.execute('''
+            CREATE TABLE exam_sessions_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                question_ids TEXT NOT NULL,
+                start_time DATETIME NOT NULL,
+                duration INTEGER NOT NULL,
+                answers TEXT DEFAULT "[]",
+                completed BOOLEAN DEFAULT 0,
+                score REAL,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        ''')
+        
+        # 复制数据到新表（排除mode列）
+        c.execute('''
+            INSERT INTO exam_sessions_new 
+            (id, user_id, question_ids, start_time, duration, answers, completed, score)
+            SELECT 
+                id, 
+                user_id, 
+                question_ids, 
+                start_time, 
+                duration, 
+                COALESCE(answers, '[]'), 
+                completed, 
+                score
+            FROM exam_sessions
+        ''')
+        
+        # 删除旧表
+        c.execute('DROP TABLE exam_sessions')
+        
+        # 重命名新表
+        c.execute('ALTER TABLE exam_sessions_new RENAME TO exam_sessions')
+        
+        # 恢复自增序列
+        if max_id > 0:
+            c.execute('UPDATE sqlite_sequence SET seq = ? WHERE name = "exam_sessions"', (max_id,))
+            if c.rowcount == 0:
+                c.execute('INSERT INTO sqlite_sequence (name, seq) VALUES ("exam_sessions", ?)', (max_id,))
+        
+        print("Exam_sessions table migrated successfully.")
+    # ==================== 迁移完成 ====================
+    
+    conn.commit()
     
     # Migrate existing history records to have bank_name
     migrate_history_data()
@@ -142,7 +230,7 @@ def init_db():
         question_id TEXT NOT NULL,
         user_answer TEXT NOT NULL,
         correct INTEGER NOT NULL,
-        bank_name TEXT, -- 记录题目所属题库
+        bank_name TEXT,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id)
     )''')
@@ -155,7 +243,7 @@ def init_db():
         difficulty TEXT,
         qtype TEXT,
         category TEXT,
-        options TEXT, -- JSON stored options
+        options TEXT,
         bank_name TEXT DEFAULT 'questions',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )''')
@@ -172,21 +260,21 @@ def init_db():
         FOREIGN KEY (question_id) REFERENCES questions(id)
     )''')
     
-    # Exam sessions table for timed mode and exams
+    # Exam sessions table for exams
     c.execute('''CREATE TABLE IF NOT EXISTS exam_sessions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
-        mode TEXT NOT NULL, -- 'exam' or 'timed'
-        question_ids TEXT NOT NULL, -- JSON list
+        question_ids TEXT NOT NULL,
         start_time DATETIME NOT NULL,
-        duration INTEGER NOT NULL, -- seconds
+        restart_time DATETIME NOT NULL,
+        duration INTEGER NOT NULL,
+        answers TEXT DEFAULT '[]',   -- JSON list of answers
         completed BOOLEAN DEFAULT 0,
         score REAL,
         FOREIGN KEY (user_id) REFERENCES users(id)
     )''')
     
     conn.commit()
-    
     
     # Run database migration to add new columns if needed
     migrate_database()
@@ -529,6 +617,34 @@ def extract_qid_number(qid):
     except ValueError:
         # 如果无法转换为数字，返回0确保排序在最后
         return 0
+
+def get_last_unfinished_exam(user_id):
+    """
+    获取用户最后一次未完成的考试
+    
+    Args:
+        user_id (int): 用户ID
+        
+    Returns:
+        sqlite3.Row or None: 考试记录，如果不存在则返回None
+    """
+    conn = get_db()
+    c = conn.cursor()
+    c.execute('''
+        SELECT 
+            id,
+            question_ids,
+            answers,
+            start_time,
+            duration,
+            completed,
+            score
+        FROM exam_sessions 
+        WHERE user_id = ? AND completed = 0
+        ORDER BY start_time DESC
+        LIMIT 1
+    ''', (user_id,))
+    return c.fetchone()
 
 # ================= 数据库日志配置 =================
 def setup_db_logger():

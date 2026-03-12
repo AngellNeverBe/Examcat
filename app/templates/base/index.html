@@ -65,40 +65,9 @@
 <div class="advanced-modes mb-4">
     <div class="card card-mode">
         <h2 class="card-title"><i class="fas fa-graduation-cap"></i> 考试模式</h2>
+        <p class="card-text">新建一个考试，或者继续未完成的考试。</p>
         <div class="mode-options d-flex gap-3 flex-wrap mt-3">
-            <form method="post" action="{{ url_for('exams.start_timed') }}" class="mode-form">
-                <div class="mode-card">
-                    <div class="mode-header">
-                        <i class="fas fa-hourglass-half mode-icon"></i>
-                        <h3>定时模式</h3>
-                    </div>
-                    <p>在指定时间内完成一定数量的题目，提高答题速度和准确率。</p>
-                    <div class="mode-settings">
-                        <div class="form-group">
-                            <label for="question_count" class="form-label">题目数量</label>
-                            <select name="question_count" id="question_count" class="form-control">
-                                <option value="5">5题</option>
-                                <option value="10" selected>10题</option>
-                                <option value="15">15题</option>
-                                <option value="20">20题</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="duration" class="form-label">时间限制</label>
-                            <select name="duration" id="duration" class="form-control">
-                                <option value="5">5分钟</option>
-                                <option value="10" selected>10分钟</option>
-                                <option value="15">15分钟</option>
-                                <option value="20">20分钟</option>
-                            </select>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-block mt-3">
-                        <i class="fas fa-play-circle"></i> 开始练习
-                    </button>
-                </div>
-            </form>
-            
+            <!-- 模拟考试表单 -->
             <form method="post" action="{{ url_for('exams.start_exam') }}" class="mode-form">
                 <div class="mode-card">
                     <div class="mode-header">
@@ -122,6 +91,45 @@
                     </button>
                 </div>
             </form>
+            
+            <!-- 考试历史栏目 -->
+            <div class="mode-card">
+                <div class="mode-header">
+                    <i class="fas fa-history mode-icon"></i>
+                    <h3>考试历史</h3>
+                </div>
+                <p>继续未完成的考试或查看历史考试记录。</p>
+                <div class="mode-settings">
+                    <div class="form-group">
+                        <label class="form-label">最近考试状态</label>
+                        {% if last_unfinished_exam_id %}
+                        <div class="alert-notrans alert-info py-2 mb-0">
+                            <i class="fas fa-info-circle"></i> 您有未完成的考试
+                        </div>
+                        {% else %}
+                        <div class="alert-notrans alert-secondary py-2 mb-0">
+                            <i class="fas fa-check-circle"></i> 暂无未完成的考试
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="d-flex flex-column gap-2 mt-3">
+                    {% if last_unfinished_exam_id %}
+                    <a href="{{ url_for('exams.continue_exam', exam_id=last_unfinished_exam_id) }}" 
+                    class="btn btn-success flex-fill">
+                        <i class="fas fa-play-circle"></i> 继续考试
+                    </a>
+                    {% else %}
+                    <button class="btn btn-outline-secondary flex-fill" disabled>
+                        <i class="fas fa-play-circle"></i> 继续考试
+                    </button>
+                    {% endif %}
+                    <a href="{{ url_for('exams.show_exams') }}" 
+                    class="btn btn-outline-primary flex-fill">
+                        <i class="fas fa-list"></i> 查看历史
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 </div>

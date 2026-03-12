@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 初始化所有基础功能
     initMobileMenu();
     initFlashMessages();
+    initNotransFlashMessages();
     initTableFeatures();
     initDeviceDetection();
 });
@@ -210,6 +211,32 @@ function initFlashMessages() {
         setTimeout(() => {
             fadeOutAlert(alert);
         }, 5000);
+    });
+}
+
+function initNotransFlashMessages() {
+    const alerts = document.querySelectorAll('.alert-notrans');
+    alerts.forEach(alert => {
+        // 添加关闭按钮
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'alert-close';
+        closeBtn.innerHTML = '&times;';
+        closeBtn.setAttribute('aria-label', '关闭消息');
+        closeBtn.style.cssText = `
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            margin-left: auto;
+            color: inherit;
+            opacity: 0.7;
+        `;
+        
+        closeBtn.addEventListener('click', function() {
+            fadeOutAlert(alert);
+        });
+        
+        alert.appendChild(closeBtn);
     });
 }
 

@@ -110,7 +110,7 @@ def show():
     for r in c.fetchall():
         exam_history.append({
             'id': r['id'],
-            'mode': r['mode'],
+            'completed': r['completed'],
             'score': r['score'],
             'start_time': r['start_time'],
             'duration': r['duration']

@@ -359,3 +359,7 @@ body > main > div.main-index-section > div.hero-section.mb-4 > div.card.card-ind
 .app-logo {
     margin-bottom: 0 !important;
 }
+
+.card-mode {
+    min-height: stretch;
+}

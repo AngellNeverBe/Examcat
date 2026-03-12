@@ -4,7 +4,7 @@ examcat - 主页面路由蓝图
 from flask import Blueprint, render_template, redirect, url_for, flash
 from datetime import datetime
 from ..utils.auth import login_required, get_user_id
-from ..utils.database import get_db, get_current_bank, get_current_question_id, get_bank_progress
+from ..utils.database import get_db, get_current_bank, get_current_question_id, get_bank_progress, get_last_unfinished_exam
 
 main_bp = Blueprint('main', __name__, template_folder='../templates/base')
 
@@ -20,11 +20,16 @@ def index():
     
     # 获取当前题库的进度信息
     progress_info = get_bank_progress(user_id, current_bank)
-    
+
+    # 获取当前未完成的考试ID
+    last_unfinished_exam = get_last_unfinished_exam(user_id)
+    last_unfinished_exam_id = last_unfinished_exam['id']
+
     return render_template('index.html', 
                           current_year=datetime.now().year,
                           current_seq_qid=current_seq_qid,
                           current_bank=current_bank,
+                          last_unfinished_exam_id = last_unfinished_exam_id,
                           answered=progress_info['answered'],
                           total=progress_info['total'],
                           progress_percentage=progress_info['progress'])

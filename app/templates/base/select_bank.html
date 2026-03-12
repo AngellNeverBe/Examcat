@@ -3,9 +3,9 @@
 {% block title %}切换题库 | {{ config.TITLE }}{% endblock %}
 
 {% block content %}
-<div class="page-title">
-    <h1>📂 题库管理</h1>
-    <p>选择或上传您的题库文件</p>
+<div class="select_bank-header mb-4">
+    <h1 class="card-title mb-2"><i class="fas fa-folder"></i> 题库管理</h1>
+    <p class="text-muted">选择或上传您的题库文件</p>
 </div>
 <!-- Current bank info -->
 <div class="current-bank-info">
@@ -24,7 +24,7 @@
     {% for bank in banks %}
     <div class="bank-card {% if bank.is_current %}current{% endif %} {% if bank.needs_loading %}needs-loading{% endif %}">
         <div class="bank-header">
-            <div class="bank-name">📁 {{ bank.name }}</div>
+            <div class="bank-name"><i class="fas fa-folder"></i> {{ bank.name }}</div>
             <div class="bank-status {% if bank.is_current %}current{% else %}available{% endif %}">
                 {% if bank.is_current %}当前使用{% else %}可用{% endif %}
             </div>

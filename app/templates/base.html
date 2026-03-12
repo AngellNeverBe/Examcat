@@ -79,7 +79,7 @@
     {% block flash_messages %}
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <div class="container">
+                <div class="container flash">
                     {% for category, message in messages %}
                         <div class="alert {% if category == 'error' %}alert-danger{% elif category == 'success' %}alert-success{% else %}alert-info{% endif %}">
                             {% if category == 'error' %}

@@ -120,7 +120,7 @@ def login():
             if c.fetchone()['cnt'] == 0:
                 load_questions_to_db(conn, current_bank)
 
-            flash("管理员登录成功", "success")
+            flash(f"欢迎，{username} !", "success")
             db_logger.info(f"[{os.getpid()}] login: 管理员{username}")
 
             # Redirect to 'next' parameter if provided
@@ -162,7 +162,7 @@ def login():
             if c.fetchone()['cnt'] == 0:
                 load_questions_to_db(conn, current_bank)
             
-            flash("登录成功", "success")
+            flash(f"欢迎，{username} !", "success")
             db_logger.info(f"[{os.getpid()}] login: 用户{username}")
             
             # Redirect to 'next' parameter if provided

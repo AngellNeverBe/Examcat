@@ -1,27 +1,13 @@
-.page-title {
+.select_bank-header {
     text-align: center;
-    margin-bottom: 30px;
-    color: #2c3e50;
 }
-
-.page-title h1 {
-    font-size: 32px;
-    margin-bottom: 10px;
-    color: #3498db;
-}
-
-.page-title p {
-    color: #7f8c8d;
-    font-size: 18px;
-}
-
 .current-bank-info {
     background: white;
     border-radius: 10px;
     padding: 25px;
     margin-bottom: 30px;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-    border-left: 5px solid #3498db;
+    border-left: 5px solid var(--primary-color);
 }
 
 .current-bank-info h2 {
@@ -33,7 +19,7 @@
 }
 
 .current-bank-info .bank-name {
-    background: #3498db;
+    background: var(--primary-color);
     color: white;
     padding: 5px 15px;
     border-radius: 20px;
@@ -87,12 +73,12 @@
 }
 
 .bank-status.current {
-    background: #3498db;
+    background: var(--info-color);
     color: white;
 }
 
 .bank-status.available {
-    background: #2ecc71;
+    background: var(--success-color);
     color: white;
 }
 
@@ -125,51 +111,6 @@
 .bank-actions {
     display: flex;
     gap: 10px;
-}
-
-.btn {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: all 0.3s;
-    text-decoration: none;
-    display: inline-block;
-    text-align: center;
-    flex: 1;
-}
-
-.btn-primary {
-    background: #3498db;
-    color: white;
-}
-
-.btn-primary:hover {
-    background: #2980b9;
-}
-
-.btn-secondary {
-    background: #95a5a6;
-    color: white;
-}
-
-.btn-secondary:hover {
-    background: #7f8c8d;
-}
-
-.btn-danger {
-    background: #e74c3c;
-    color: white;
-}
-
-.btn-danger:hover {
-    background: #c0392b;
-}
-
-.btn:disabled {
-    background: #bdc3c7;
-    cursor: not-allowed;
 }
 
 .upload-section {
@@ -283,7 +224,7 @@
 
 .progress-fill {
     height: 100%;
-    background: #2ecc71;
+    background: var(--success-color);
     border-radius: 4px;
     transition: width 0.3s;
 }
@@ -313,7 +254,7 @@
 
 .progress-fill {
     height: 100%;
-    background-color: #28a745;
+    background-color: var(--success-color);
     border-radius: 4px;
     transition: width 0.3s ease;
 }
@@ -328,7 +269,7 @@
 }
 
 .bank-card.current {
-    border: 2px solid #007bff;
+    border: 2px solid var(--info-color);
     box-shadow: 0 0 15px rgba(0,123,255,0.3);
 }
 

@@ -19,7 +19,14 @@
         <!-- Flash消息 -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <div class="container" style="max-width: 400px; margin: 0 auto;">
+                <div class="container" style="
+                    max-width: 400px;
+                    margin: 0 auto;
+                    position: fixed;
+                    top: 6%;
+                    left: 50%;
+                    z-index: 999;
+                    transform: translate(-50%, -50%);">
                     {% for category, message in messages %}
                         <div class="alert {% if category == 'error' %}alert-danger{% elif category == 'success' %}alert-success{% else %}alert-info{% endif %}">
                             {% if category == 'error' %}

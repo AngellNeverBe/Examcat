@@ -167,7 +167,7 @@ nav {
 }
 
 .card:hover {
-  transform: translateY(-5px);
+  transform: translateY(-3px);
   box-shadow: 0 0.8rem 1.5rem rgba(0, 0, 0, 0.1);
 }
 
@@ -403,6 +403,9 @@ input[type="radio"] {
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   min-height: 2.25rem;
+}
+.btn-sm:hover {
+  text-decoration-line: underline;
 }
 
 .btn-lg {
