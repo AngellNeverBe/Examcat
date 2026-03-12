@@ -145,12 +145,6 @@
                     </div>
                     {% else %}
                     <div class="mt-4 text-center">
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i> 考试已完成
-                            {% if exam.score is not none %}
-                            | 得分: <strong>{{ "%.2f"|format(exam.score) }}%</strong>
-                            {% endif %}
-                        </div>
                         <a href="{{ url_for('exams.show_exams') }}" class="btn btn-primary">
                             <i class="fas fa-list"></i> 返回考试列表
                         </a>
