@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}题目 | {{ config.TITLE }}{% endblock %}
+{% block title %}{{ question.id }} | {{ config.TITLE }}{% endblock %}
 
 <!-- 覆盖原来的flash -->
 {% block flash_messages %}{% endblock %}

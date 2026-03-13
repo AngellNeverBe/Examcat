@@ -1498,3 +1498,32 @@ input[type="radio"] {
 a:-webkit-any-link {
   text-decoration: none
 }
+
+/* Artalk */
+.atk-main-editor>.atk-bottom .atk-send-btn {
+  background-color:var(--primary-color) !important
+}
+
+.artalk>.atk-list>.atk-list-header .atk-right-action>span.atk-on, .artalk>.atk-list>.atk-list-header .atk-right-action>span.atk-on *{
+  color:var(--primary-color) !important
+}
+
+.atk-comment>.atk-main>.atk-header .atk-badge {
+  background-color:var(--primary-color) !important
+}
+
+.atk-comment>.atk-main>.atk-header .atk-item.atk-nick, .atk-comment>.atk-main>.atk-header .atk-item.atk-nick a {
+  color:var(--primary-color) !important
+}
+
+.artalk>.atk-list>.atk-list-footer .atk-copyright a {
+  color:var(--primary-color) !important
+}
+
+.atk-comment>.atk-main>.atk-body>.atk-collapsed .atk-show-btn {
+  color:var(--primary-color) !important
+}
+
+.atk-comment>.atk-main>.atk-header .atk-item.atk-reply-at>.atk-nick {
+  color:var(--primary-color) !important
+}

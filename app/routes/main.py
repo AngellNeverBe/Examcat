@@ -23,7 +23,7 @@ def index():
 
     # 获取当前未完成的考试ID
     last_unfinished_exam = get_last_unfinished_exam(user_id)
-    last_unfinished_exam_id = last_unfinished_exam['id']
+    last_unfinished_exam_id = last_unfinished_exam['id'] if last_unfinished_exam else None
 
     return render_template('index.html', 
                           current_year=datetime.now().year,
