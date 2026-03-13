@@ -28,7 +28,7 @@ a i {
 :disabled,
 [disabled],
 [aria-disabled="true"] {
-    cursor: url('/static/cursors/unavailiable.cur')8 0, not-allowed;
+    cursor: url('/static/cursors/unavailiable.cur'), not-allowed;
 }
 
 .btn {
@@ -61,21 +61,20 @@ select {
 select {
     cursor: url('/static/cursors/link.cur') 8 0, pointer !important;
 }
-.option-label {
+.option-label,
+.option-label span,
+.option-label strong,
+.option-checkbox {
     cursor: url('/static/cursors/link.cur') 8 0, pointer !important;
 }
 .option-label:hover {
     cursor: url('/static/cursors/link.cur') 8 0, pointer !important;
 }
-.option-label span {
-    cursor: url('/static/cursors/link.cur') 8 0, pointer !important;
-}
-.option-checkbox {
-    cursor: url('/static/cursors/link.cur') 8 0, pointer !important;
-}
 /* 已禁用状态 */
-.option-checkbox:disabled,
-.option-checkbox:disabled + .option-text {
+.option-label:has(.option-checkbox:disabled),
+.option-label:has(.option-checkbox:disabled) span,
+.option-label:has(.option-checkbox:disabled) strong,
+.option-checkbox:disabled {
     cursor: url('/static/cursors/unavailiable.cur'), not-allowed !important;
 }
 /* 已选中状态 */
@@ -85,9 +84,35 @@ select {
 .option-label.option-incorrect {
     cursor: url('/static/cursors/unavailiable.cur'), not-allowed !important;
 }
+
+.option-card,
+.option-card .option-key,
+.option-card .option-value {
+    cursor: url('/static/cursors/link.cur') 8 0, pointer !important;
+}
+.option-card.correct,
+.option-card.correct .option-key,
+.option-card.correct .option-value {
+    cursor: url('/static/cursors/unavailiable.cur'), not-allowed !important;
+}
+.option-card.selected.incorrect,
+.option-card.selected.incorrect .option-key,
+.option-card.selected.incorrect .option-value {
+    cursor: url('/static/cursors/unavailiable.cur'), not-allowed !important;
+}
+.option-card.selected.correct,
+.option-card.selected.correct .option-key,
+.option-card.selected.correct .option-value {
+    cursor: url('/static/cursors/unavailiable.cur'), not-allowed !important;
+}
+
+.question-grid div {
+    cursor: url('/static/cursors/link.cur') 8 0, pointer !important;
+}
 .atk-common-action-btn {
     cursor: url('/static/cursors/link.cur') 8 0, pointer !important;
 }
 .atk-plug-btn {
     cursor: url('/static/cursors/link.cur') 8 0, pointer !important;
 }
+
