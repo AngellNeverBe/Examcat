@@ -1,0 +1,93 @@
+/* auto - 浏览器自动选择 */
+* {
+    cursor: url('/static/cursors/pointer.cur'), auto;
+}
+
+/* default - 默认箭头 */
+.cursor-default,
+[data-cursor="default"] {
+    cursor: url('/static/cursors/pointer.cur'), default;
+}
+
+/* pointer - 链接/可点击 */
+.cursor-pointer,
+[data-cursor="pointer"] {
+    cursor: url('/static/cursors/link.cur')8 0, pointer;
+}
+
+/* 链接 */
+a[href],
+area[href] {
+    cursor: url('/static/cursors/link.cur')8 0, pointer;
+}
+a i {
+    cursor: url('/static/cursors/link.cur')8 0, pointer;
+}
+
+/* 禁用状态 */
+:disabled,
+[disabled],
+[aria-disabled="true"] {
+    cursor: url('/static/cursors/unavailiable.cur')8 0, not-allowed;
+}
+
+.btn {
+    cursor: url('/static/cursors/link.cur') 8 0, pointer;
+}
+button,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+[role="button"] {
+    cursor: url('/static/cursors/link.cur')8 0, pointer;
+}
+button:hover,
+input[type="button"]:hover,
+input[type="submit"]:hover,
+input[type="reset"]:hover,
+[role="button"]:hover {
+    cursor: url('/static/cursors/link.cur')8 0, pointer;
+}
+button i {
+    cursor: url('/static/cursors/link.cur')8 0, pointer;
+}
+
+/* 表单元素 */
+input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]),
+textarea,
+select {
+    cursor: url('/static/cursors/text.cur') 18 16, text;
+}
+select {
+    cursor: url('/static/cursors/link.cur') 8 0, pointer !important;
+}
+.option-label {
+    cursor: url('/static/cursors/link.cur') 8 0, pointer !important;
+}
+.option-label:hover {
+    cursor: url('/static/cursors/link.cur') 8 0, pointer !important;
+}
+.option-label span {
+    cursor: url('/static/cursors/link.cur') 8 0, pointer !important;
+}
+.option-checkbox {
+    cursor: url('/static/cursors/link.cur') 8 0, pointer !important;
+}
+/* 已禁用状态 */
+.option-checkbox:disabled,
+.option-checkbox:disabled + .option-text {
+    cursor: url('/static/cursors/unavailiable.cur'), not-allowed !important;
+}
+/* 已选中状态 */
+.option-label.option-correct {
+    cursor: url('/static/cursors/unavailiable.cur'), pointer !important;
+}
+.option-label.option-incorrect {
+    cursor: url('/static/cursors/unavailiable.cur'), not-allowed !important;
+}
+.atk-common-action-btn {
+    cursor: url('/static/cursors/link.cur') 8 0, pointer !important;
+}
+.atk-plug-btn {
+    cursor: url('/static/cursors/link.cur') 8 0, pointer !important;
+}
