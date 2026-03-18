@@ -48,18 +48,11 @@
             <a href="{{ url_for('banks.select_bank') }}" class="nav-link{% if request.path == url_for('banks.select_bank') %} active{% endif %}">
                 <i class="fas fa-folder-open"></i> 题库管理
             </a>
-            <a href="{{ url_for('questions.sequential_start') }}" class="nav-link{% if request.path == url_for('questions.sequential_start') %} active{% endif %}">
-                <i class="fas fa-list-ol"></i> 刷题模式
-            </a>
-            <a href="{{ url_for('questions.random_question') }}" class="nav-link{% if request.path == url_for('questions.random_question') %} active{% endif %}">
-                <i class="fas fa-random"></i> 随机模式
-            </a>
+            
             <a href="{{ url_for('questions.search') }}" class="nav-link{% if request.path == url_for('questions.search') %} active{% endif %}">
                 <i class="fas fa-search"></i> 搜索题目
             </a>
-            <a href="{{ url_for('browse.filter') }}" class="nav-link{% if request.path == url_for('browse.filter') %} active{% endif %}">
-                <i class="fas fa-filter"></i> 筛选题目
-            </a>
+            
             <a href="{{ url_for('questions.wrong_questions') }}" class="nav-link{% if request.path == url_for('questions.wrong_questions') %} active{% endif %}">
                 <i class="fas fa-times-circle"></i> 查看错题
             </a>

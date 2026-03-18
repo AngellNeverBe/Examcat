@@ -64,14 +64,6 @@ def show(qid):
         db_logger.error(f"[{os.getpid()}] questions.show: 用户{user_id}, 题目{qid}")
 
         return redirect(url_for('main.index'))
-
-    # Check if the question belongs to current bank before updating
-    if q.get('bank_name') == current_bank:
-        # Update current_seq_qid only if the question belongs to current bank
-        conn = get_db()
-        c = conn.cursor()
-        c.execute('UPDATE users SET current_seq_qid = ? WHERE id = ?', (qid, user_id))
-        conn.commit()
     
     # Calculate next question ID
     next_qid = None

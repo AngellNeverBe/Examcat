@@ -29,7 +29,7 @@
             {% elif wrong_mode %}
                 <span class="badge badge-secondary">错题模式</span>
             {% else %}
-                <span class="badge badge-secondary">错题模式</span>
+                <span class="badge badge-secondary">其他模式</span>
             {% endif %}
             {% if question.type %}
                 <span class="badge badge-info">{{ question.type }}</span>
@@ -210,7 +210,7 @@
         <h2 class="mb-3">恭喜！您已经回答了所有题目</h2>
         <p class="mb-4">您可以重置答题历史，或者尝试其他学习模式</p>
         <div class="d-flex gap-2 justify-content-center flex-wrap">
-            <form method="post" action="{{ url_for('reset_history') }}">
+            <form method="post" action="{{ url_for('main.reset_history') }}">
                 <button type="submit" class="btn btn-warning" onclick="return confirm('确定要重置答题历史吗？此操作不可恢复。')">
                     <i class="fas fa-redo"></i> 重置答题历史
                 </button>
