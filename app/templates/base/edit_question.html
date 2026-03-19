@@ -1,0 +1,260 @@
+{% extends 'base.html' %}
+
+{% block title %}编辑题目 | {{ config.TITLE }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- 返回按钮 -->
+            <div class="mb-4">
+                <a href="{{ url_for('browse.index') }}" class="btn btn-primary">
+                    <i class="fas fa-arrow-left"></i> 返回浏览
+                </a>
+            </div>
+            
+            <!-- 编辑表单卡片 -->
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-edit"></i> 编辑题目
+                        <span class="badge bg-light text-dark ms-2">{{ current_bank }}</span>
+                    </h4>
+                </div>
+                
+                <div class="card-body">
+                    <form method="post" id="editQuestionForm">
+                        <!-- 题目基本信息 -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="questionId" class="form-label fw-bold">
+                                        <i class="fas fa-hashtag"></i> 题号
+                                    </label>
+                                    <input type="text" class="form-control" id="questionId" 
+                                           value="{{ question.id }}" readonly disabled>
+                                    <div class="form-text">题号不可修改</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="qtype" class="form-label fw-bold">
+                                        <i class="fas fa-tag"></i> 题型
+                                    </label>
+                                    <select class="form-select" id="qtype" name="qtype" required>
+                                        <option value="">请选择题型</option>
+                                        {% for type in available_types %}
+                                        <option value="{{ type }}" {% if question.qtype == type %}selected{% endif %}>
+                                            {{ type }}
+                                        </option>
+                                        {% endfor %}
+                                        {% if question.qtype and question.qtype not in available_types %}
+                                        <option value="{{ question.qtype }}" selected>{{ question.qtype }}</option>
+                                        {% endif %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 题干 -->
+                        <div class="form-group mb-4">
+                            <label for="stem" class="form-label fw-bold">
+                                <i class="fas fa-question-circle"></i> 题干
+                            </label>
+                            <textarea class="form-control" id="stem" name="stem" 
+                                      rows="5" required placeholder="请输入题目内容...">{{ question.stem }}</textarea>
+                            <div class="form-text">支持多行文本，请清晰描述问题</div>
+                        </div>
+                        
+                        <!-- 选项（如果是选择题） -->
+                        <div class="mb-4" id="optionsSection">
+                            <h5 class="mb-3">
+                                <i class="fas fa-list-ul"></i> 选项
+                                <small class="text-muted">（非选择题可留空）</small>
+                            </h5>
+                            
+                            <div class="row g-3">
+                                {% for opt in ['A', 'B', 'C', 'D', 'E'] %}
+                                <div class="col-md-12">
+                                    <div class="input-group">
+                                        <span class="input-group-text" style="width: 40px;">{{ opt }}</span>
+                                        <input type="text" class="form-control" 
+                                               id="option_{{ opt }}" 
+                                               name="option_{{ opt }}"
+                                               value="{{ question.options[opt] if opt in question.options else '' }}"
+                                               placeholder="选项 {{ opt }} 内容">
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <!-- 答案和分类 -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="answer" class="form-label fw-bold">
+                                        <i class="fas fa-check-circle"></i> 正确答案
+                                    </label>
+                                    <input type="text" class="form-control" id="answer" 
+                                           name="answer" value="{{ question.answer }}" required
+                                           placeholder="例如：A 或 正确">
+                                    <div class="form-text">单选题填字母（如A），多选题用逗号分隔（如A,B），判断题填"正确"或"错误"</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <div class="form-group mb-3">
+                                    <label for="difficulty" class="form-label fw-bold">
+                                        <i class="fas fa-chart-line"></i> 难度
+                                    </label>
+                                    <select class="form-select" id="difficulty" name="difficulty">
+                                        <option value="">请选择难度</option>
+                                        {% for difficulty in available_difficulties %}
+                                        <option value="{{ difficulty }}" {% if question.difficulty == difficulty %}selected{% endif %}>
+                                            {{ difficulty }}
+                                        </option>
+                                        {% endfor %}
+                                        {% if question.difficulty and question.difficulty not in available_difficulties %}
+                                        <option value="{{ question.difficulty }}" selected>{{ question.difficulty }}</option>
+                                        {% endif %}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <div class="form-group mb-3">
+                                    <label for="category" class="form-label fw-bold">
+                                        <i class="fas fa-folder"></i> 分类
+                                    </label>
+                                    <select class="form-select" id="category" name="category">
+                                        <option value="">请选择分类</option>
+                                        {% for category in available_categories %}
+                                        <option value="{{ category }}" {% if question.category == category %}selected{% endif %}>
+                                            {{ category }}
+                                        </option>
+                                        {% endfor %}
+                                        {% if question.category and question.category not in available_categories %}
+                                        <option value="{{ question.category }}" selected>{{ question.category }}</option>
+                                        {% endif %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 表单操作按钮 -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ url_for('browse.index') }}" class="btn btn-danger">
+                                <i class="fas fa-times"></i> 取消
+                            </a>
+                            <div>
+                                <button type="reset" class="btn btn-warning me-2">
+                                    <i class="fas fa-undo"></i> 重置
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> 保存修改
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- 卡片页脚 -->
+                <div class="card-footer bg-light">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle"></i> 
+                        修改题目将同时更新数据库和CSV文件，确保数据同步。
+                    </small>
+                </div>
+            </div>
+            
+            <!-- 预览区域 -->
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-eye"></i> 题目预览
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="preview-content" id="questionPreview">
+                        <p><strong>题号：</strong>{{ question.id }}</p>
+                        <p><strong>题型：</strong>{{ question.qtype }}</p>
+                        <p><strong>题干：</strong>{{ question.stem }}</p>
+                        
+                        {% if question.options %}
+                        <p><strong>选项：</strong></p>
+                        <ul>
+                            {% for opt, value in question.options.items() %}
+                            <li>{{ opt }}. {{ value }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                        
+                        <p><strong>答案：</strong> <span class="badge bg-success">{{ question.answer }}</span></p>
+                        <p><strong>难度：</strong> <span class="badge bg-warning">{{ question.difficulty }}</span></p>
+                        <p><strong>分类：</strong> <span class="badge bg-info">{{ question.category }}</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 实时预览功能
+    document.addEventListener('DOMContentLoaded', function() {
+        const stemInput = document.getElementById('stem');
+        const answerInput = document.getElementById('answer');
+        const qtypeSelect = document.getElementById('qtype');
+        const difficultySelect = document.getElementById('difficulty');
+        const categorySelect = document.getElementById('category');
+        const previewElement = document.getElementById('questionPreview');
+        
+        // 更新预览的函数
+        function updatePreview() {
+            const previewHTML = `
+                <p><strong>题号：</strong>{{ question.id }}</p>
+                <p><strong>题型：</strong>${qtypeSelect.value || '未设置'}</p>
+                <p><strong>题干：</strong>${stemInput.value || '未设置'}</p>
+                
+                <p><strong>选项：</strong></p>
+                <ul>
+                    ${['A', 'B', 'C', 'D', 'E'].map(opt => {
+                        const optionInput = document.getElementById('option_' + opt);
+                        return optionInput && optionInput.value ? `<li>${opt}. ${optionInput.value}</li>` : '';
+                    }).join('')}
+                </ul>
+                
+                <p><strong>答案：</strong> <span class="badge bg-success">${answerInput.value || '未设置'}</span></p>
+                <p><strong>难度：</strong> <span class="badge bg-warning">${difficultySelect.value || '未设置'}</span></p>
+                <p><strong>分类：</strong> <span class="badge bg-info">${categorySelect.value || '未设置'}</span></p>
+            `;
+            
+            previewElement.innerHTML = previewHTML;
+        }
+        
+        // 为所有输入添加事件监听
+        const inputs = [stemInput, answerInput, qtypeSelect, difficultySelect, categorySelect];
+        inputs.forEach(input => {
+            if (input) {
+                input.addEventListener('input', updatePreview);
+                input.addEventListener('change', updatePreview);
+            }
+        });
+        
+        // 为选项输入添加事件监听
+        ['A', 'B', 'C', 'D', 'E'].forEach(opt => {
+            const optionInput = document.getElementById('option_' + opt);
+            if (optionInput) {
+                optionInput.addEventListener('input', updatePreview);
+            }
+        });
+        
+        // 初始更新一次预览
+        updatePreview();
+    });
+</script>
+{% endblock %}

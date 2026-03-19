@@ -1,10 +1,10 @@
 """
 examcat - 浏览路由蓝图
 """
-from flask import Blueprint, render_template, request
+from flask import Blueprint, render_template, request, flash, redirect, url_for
 import json
-from ..utils.auth import login_required, get_user_id
-from ..utils.database import get_db, get_current_bank
+from ..utils.auth import login_required, get_user_id, admin_required
+from ..utils.database import get_db, get_current_bank, get_question_by_id, update_question_in_db
 from ..utils.questions import is_favorite
 
 browse_bp = Blueprint('browse', __name__, url_prefix='/browse', template_folder='../templates/base')
@@ -298,3 +298,83 @@ def by_difficulty(difficulty):
                           total_pages=total_pages,
                           total=total,
                           current_bank=current_bank)
+
+@browse_bp.route('/edit/<question_id>', methods=['GET', 'POST'])
+@admin_required
+def edit_question(question_id):
+    """编辑题目"""
+    user_id = get_user_id()
+    current_bank = get_current_bank(user_id)
+    
+    conn = get_db()
+    c = conn.cursor()
+    
+    # 获取题目信息
+    question = get_question_by_id(question_id)
+    if not question:
+        flash('题目不存在', 'error')
+        return redirect(url_for('browse.index'))
+    
+    # 检查题目是否属于当前用户的题库
+    if question['bank_name'] != current_bank:
+        flash('您无法编辑此题库的题目', 'error')
+        return redirect(url_for('browse.index'))
+    
+    if request.method == 'POST':
+        # 处理表单提交
+        stem = request.form.get('stem', '').strip()
+        answer = request.form.get('answer', '').strip()
+        difficulty = request.form.get('difficulty', '未知')
+        qtype = request.form.get('qtype', '未知')
+        category = request.form.get('category', '未分类')
+        
+        # 收集选项
+        options = {}
+        for opt in ['A', 'B', 'C', 'D', 'E']:
+            option_value = request.form.get(f'option_{opt}', '').strip()
+            if option_value:
+                options[opt] = option_value
+        
+        # 验证必填字段
+        if not stem:
+            flash('题干不能为空', 'error')
+            return render_template('edit_question.html', question=question)
+        
+        if not answer:
+            flash('答案不能为空', 'error')
+            return render_template('edit_question.html', question=question)
+        
+        # 准备更新数据
+        updated_data = {
+            'stem': stem,
+            'answer': answer,
+            'difficulty': difficulty,
+            'qtype': qtype,
+            'category': category,
+            'options': options
+        }
+        # 更新题目
+        success = update_question_in_db(question_id, updated_data)
+        
+        if success:
+            flash('题目更新成功', 'success')
+            return redirect(url_for('browse.index'))
+        else:
+            flash('题目更新失败，请重试', 'error')
+    
+    # 获取可用的题型、难度和分类选项（用于下拉菜单）
+    c.execute('SELECT DISTINCT qtype FROM questions WHERE bank_name = ? AND qtype IS NOT NULL AND qtype != ""', (current_bank,))
+    available_types = [row['qtype'] for row in c.fetchall()]
+    
+    c.execute('SELECT DISTINCT difficulty FROM questions WHERE bank_name = ? AND difficulty IS NOT NULL AND difficulty != ""', (current_bank,))
+    available_difficulties = [row['difficulty'] for row in c.fetchall()]
+    
+    c.execute('SELECT DISTINCT category FROM questions WHERE bank_name = ? AND category IS NOT NULL AND category != ""', (current_bank,))
+    available_categories = [row['category'] for row in c.fetchall()]
+    
+    return render_template('edit_question.html',
+                         question=question,
+                         available_types=available_types,
+                         available_difficulties=available_difficulties,
+                         available_categories=available_categories,
+                         current_bank=current_bank)

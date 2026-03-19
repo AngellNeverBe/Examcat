@@ -19,7 +19,7 @@
 }
 
 .desktop-search-input:focus {
-    border-color: #4361ee;
+    border-color: var(--primary-color);
     box-shadow: 0 0 0 0.2rem rgba(67, 97, 238, 0.25);
 }
 
@@ -64,7 +64,7 @@
 }
 
 .desktop-filter-select:focus {
-    border-color: #4361ee;
+    border-color: var(--primary-color);
     box-shadow: 0 0 0 0.2rem rgba(67, 97, 238, 0.25);
 }
 
@@ -73,7 +73,7 @@
     padding: 1rem;
     background: rgba(67, 97, 238, 0.05);
     border-radius: 8px;
-    border-left: 4px solid #4361ee;
+    border-left: 4px solid var(--primary-color);
 }
 
 .desktop-active-filters .badge {
@@ -110,11 +110,11 @@
 }
 
 .advanced-filter-group .form-check-input:checked + .form-check-label {
-    color: #4361ee;
+    color: var(--primary-color);
 }
 
 .modal-header {
-    background: linear-gradient(135deg, #4361ee 0%, #7209b7 100%);
+    background: linear-gradient(135deg, var(--primary-color) 0%, #7209b7 100%);
     color: white;
     border-bottom: none;
 }
@@ -171,7 +171,7 @@
     background: rgba(248, 249, 250, 0.8);
     border-radius: 8px;
     padding: 1rem;
-    border-left: 4px solid #4361ee;
+    border-left: 4px solid var(--primary-color);
 }
 
 .questions-list .question-expanded-content {
@@ -204,7 +204,7 @@
 }
 
 .questions-list .options-grid .option-item:hover {
-    border-color: #4361ee;
+    border-color: var(--primary-color);
     background: rgba(67, 97, 238, 0.05);
 }
 
@@ -221,7 +221,7 @@
 }
 
 .mobile-header-gradient {
-    background: linear-gradient(135deg, #4361ee 0%, #7209b7 100%);
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-color) 100%);
     color: white;
     box-shadow: 0 4px 20px rgba(67, 97, 238, 0.3);
 }
@@ -357,7 +357,7 @@
 
 .filter-chip.active {
     background: white;
-    color: #4361ee;
+    color: var(--primary-color);
     border-color: white;
 }
 
@@ -403,7 +403,7 @@
 }
 
 .mobile-question-badge {
-    background: #4361ee;
+    background: var(--primary-color);
     color: white;
     padding: 6px 12px;
     border-radius: 8px;
@@ -413,7 +413,7 @@
 
 .mobile-type-chip {
     background: rgba(67, 97, 238, 0.1);
-    color: #4361ee;
+    color: var(--primary-color);
     padding: 4px 10px;
     border-radius: 12px;
     font-size: 0.75rem;
@@ -446,11 +446,11 @@
 
 .mobile-play-btn {
     background: rgba(67, 97, 238, 0.1);
-    color: #4361ee;
+    color: var(--primary-color);
 }
 
 .mobile-play-btn:hover {
-    background: #4361ee;
+    background: var(--primary-color);
     color: white;
 }
 
@@ -534,7 +534,7 @@
 }
 
 .mobile-option-label {
-    background: #4361ee;
+    background: var(--primary-color);
     color: white;
     width: 24px;
     height: 24px;
@@ -634,7 +634,7 @@
 .mobile-primary-btn {
     flex: 2;
     padding: 12px;
-    background: #4361ee;
+    background: var(--primary-color);
     color: white;
     border: none;
     border-radius: 12px;
@@ -755,6 +755,10 @@
 }
 
 .option-label {
+    padding-top: 0;
+    padding-bottom: 0;
+    padding-left: 8px;
+    padding-right: 8px;
     min-width: 24px;
     margin-right: 0.5rem;
 }
@@ -792,7 +796,7 @@
 }
 
 .desktop-jump-input:focus {
-    border-color: #4361ee;
+    border-color: var(--primary-color);
     box-shadow: 0 0 0 0.2rem rgba(67, 97, 238, 0.25);
     transform: scale(1.05);
 }

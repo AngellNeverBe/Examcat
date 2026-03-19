@@ -10,7 +10,7 @@
             <!-- Title and Navigation -->
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div class="d-flex align-items-center">
-                    <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary btn-sm me-3">
+                    <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary btn-sm me-3" style="color:var(--primary-color)">
                         <i class="fas fa-arrow-left"></i> 返回首页
                     </a>
                     <h2 class="mb-0">
@@ -18,9 +18,6 @@
                     </h2>
                 </div>
                 <div class="browse-stats">
-                    <button class="btn btn-primary me-3" data-bs-toggle="modal" data-bs-target="#advancedFilterModal">
-                        <i class="fas fa-sliders-h"></i> 高级筛选
-                    </button>
                     <span class="badge badge-info">
                         <i class="fas fa-list"></i> 共<span id="desktop-filtered-count">{{ total }}</span>/{{ total }}题
                     </span>
@@ -48,54 +45,7 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Filter Dropdown -->
-                    <div class="col-md-6">
-                        <div class="desktop-filter-container">
-                            <select class="form-select desktop-filter-select" id="desktopTypeFilter">
-                                <option value="all" {% if not current_type or current_type == 'all' %}selected{% endif %}>
-                                    <i class="fas fa-filter"></i> 全部题型
-                                </option>
-                                {% for type in available_types %}
-                                <option value="{{ type }}" {% if current_type == type %}selected{% endif %}>
-                                    {{ type }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
                 </div>
-            </div>
-            
-            <!-- Filter Tags Display -->
-            <div class="desktop-active-filters" id="desktopActiveFilters" style="display: {% if current_type or current_search %}block{% else %}none{% endif %};">
-                <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <small class="text-muted">当前筛选:</small>
-                    {% if current_search %}
-                    <span class="badge bg-primary">
-                        <i class="fas fa-search me-1"></i>
-                        搜索: {{ current_search }}
-                        <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.7em;" onclick="clearSearchFilter()"></button>
-                    </span>
-                    {% endif %}
-                    {% if current_type and current_type != 'all' %}
-                    <span class="badge bg-info">
-                        <i class="fas fa-tag me-1"></i>
-                        类型: {{ current_type }}
-                        <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.7em;" onclick="clearTypeFilter()"></button>
-                    </span>
-                    {% endif %}
-                    <button class="btn btn-sm btn-outline-secondary" onclick="clearAllFilters()">
-                        <i class="fas fa-times"></i> 清除所有筛选
-                    </button>
-                </div>
-            </div>
-            
-            <div class="browse-info">
-                <p class="text-muted mb-0">
-                    <i class="fas fa-info-circle"></i> 
-                    点击题目标题可直接进入答题模式，点击展开按钮查看完整题目内容。使用搜索和筛选功能快速找到你需要的题目。
-                </p>
             </div>
         </div>
     </div>
@@ -115,11 +65,6 @@
                 <div class="col">
                     <h1 class="mobile-title mb-0">浏览题目</h1>
                     <div class="mobile-subtitle">共<span id="filtered-count">{{ total }}</span>/{{ total }}题</div>
-                </div>
-                <div class="col-auto">
-                    <button class="btn btn-mobile-stats" data-bs-toggle="modal" data-bs-target="#statsModal">
-                        <i class="fas fa-chart-bar"></i>
-                    </button>
                 </div>
             </div>
             
@@ -180,7 +125,11 @@
                     {% endif %}
                 </div>
                 
-                <div class="question-actions d-flex align-items-center">
+                <div class="question-actions d-flex align-items-center mt-0">
+                    <!-- 编辑按钮 -->
+                    <a href="{{ url_for('browse.edit_question', question_id=question.id) }}" class="btn btn-sm btn-primary me-2" title="答题">
+                        <i class="fas fa-edit"></i>
+                    </a>
                     {% if question.is_favorite %}
                     <form method="post" action="{{ url_for('favorites.remove', qid=question.id) }}" class="d-inline me-2">
                         <button type="submit" class="btn btn-sm btn-outline-warning" title="取消收藏">
@@ -207,7 +156,7 @@
             
             <!-- Question Stem Preview -->
             <div class="question-stem-preview">
-                <p class="question-stem-text mb-2">{{ question.stem[:150] }}{% if question.stem|length > 150 %}...{% endif %}</p>
+                <p class="question-stem-text mb-0">{{ question.stem[:150] }}{% if question.stem|length > 150 %}...{% endif %}</p>
             </div>
             
             <!-- Expanded Content (Initially Hidden) -->
@@ -237,7 +186,7 @@
                 
                 <!-- Answer -->
                 <div class="question-answer">
-                    <div class="alert alert-success d-flex align-items-center">
+                    <div class="alert-noflash alert-success d-flex align-items-center">
                         <i class="fas fa-check-circle me-2"></i>
                         <strong>正确答案：{{ question.answer }}</strong>
                     </div>
@@ -381,157 +330,155 @@
 </div>
 
 <!-- Pagination -->
-<nav aria-label="题目分页" class="mt-4">
-    <div class="pagination-container">
-        <!-- Desktop Pagination -->
-        <div class="desktop-pagination d-none d-md-block">
-            <!-- Main Pagination -->
-            <ul class="pagination pagination-desktop justify-content-center mb-3">
-                {% if has_prev %}
-                <li class="page-item">
-                    <a class="page-link" href="{{ url_for('browse.index', page=page-1, type=current_type, search=current_search) }}" title="上一页">
-                        <i class="fas fa-chevron-left"></i>
-                    </a>
-                </li>
-                {% else %}
-                <li class="page-item disabled">
-                    <span class="page-link"><i class="fas fa-chevron-left"></i></span>
-                </li>
-                {% endif %}
-                
-                <!-- Show first page if not in range -->
-                {% if page > 3 %}
-                <li class="page-item">
-                    <a class="page-link" href="{{ url_for('browse.index', page=1, type=current_type, search=current_search) }}">1</a>
-                </li>
-                {% if page > 4 %}
-                <li class="page-item disabled">
-                    <span class="page-link">...</span>
-                </li>
-                {% endif %}
-                {% endif %}
-                
-                <!-- Show pages around current page -->
-                {% set start_page = [1, page - 1]|max %}
-                {% set end_page = [total_pages, page + 1]|min %}
-                
-                {% for p in range(start_page, end_page + 1) %}
-                <li class="page-item {% if p == page %}active{% endif %}">
-                    {% if p == page %}
-                    <span class="page-link">{{ p }}</span>
-                    {% else %}
-                    <a class="page-link" href="{{ url_for('browse.index', page=p, type=current_type, search=current_search) }}">{{ p }}</a>
-                    {% endif %}
-                </li>
-                {% endfor %}
-                
-                <!-- Show last page if not in range -->
-                {% if page < total_pages - 2 %}
-                {% if page < total_pages - 3 %}
-                <li class="page-item disabled">
-                    <span class="page-link">...</span>
-                </li>
-                {% endif %}
-                <li class="page-item">
-                    <a class="page-link" href="{{ url_for('browse.index', page=total_pages, type=current_type, search=current_search) }}">{{ total_pages }}</a>
-                </li>
-                {% endif %}
-                
-                {% if has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="{{ url_for('browse.index', page=page+1, type=current_type, search=current_search) }}" title="下一页">
-                        <i class="fas fa-chevron-right"></i>
-                    </a>
-                </li>
-                {% else %}
-                <li class="page-item disabled">
-                    <span class="page-link"><i class="fas fa-chevron-right"></i></span>
-                </li>
-                {% endif %}
-            </ul>
+<div class="pagination-container">
+    <!-- Desktop Pagination -->
+    <div class="desktop-pagination d-none d-md-block">
+        <!-- Main Pagination -->
+        <ul class="pagination pagination-desktop justify-content-center mb-3">
+            {% if has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('browse.index', page=page-1, type=current_type, search=current_search) }}" title="上一页">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link"><i class="fas fa-chevron-left"></i></span>
+            </li>
+            {% endif %}
             
-            <!-- Desktop Page Jump -->
-            <div class="desktop-page-jump text-center">
-                <div class="card border-0 bg-light">
-                    <div class="card-body py-3">
-                        <form method="get" class="d-flex align-items-center justify-content-center gap-3" id="desktopPageJumpForm">
-                            {% if current_type %}<input type="hidden" name="type" value="{{ current_type }}">{% endif %}
-                            {% if current_search %}<input type="hidden" name="search" value="{{ current_search }}">{% endif %}
-                            
-                            <div class="d-flex align-items-center gap-2">
-                                <i class="fas fa-share-square text-primary"></i>
-                                <span class="text-muted fw-medium">快速跳转到第</span>
-                                <input type="number" name="page" class="form-control text-center desktop-jump-input" 
-                                       min="1" max="{{ total_pages }}" placeholder="{{ page }}" title="输入页码">
-                                <span class="text-muted fw-medium">页</span>
-                                <button type="submit" class="btn btn-primary btn-sm px-3">
-                                    <i class="fas fa-arrow-right me-1"></i>跳转
-                                </button>
-                            </div>
-                            
-                            <div class="text-muted small">
-                                <i class="fas fa-info-circle me-1"></i>
-                                共 {{ total_pages }} 页
-                            </div>
-                        </form>
+            <!-- Show first page if not in range -->
+            {% if page > 3 %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('browse.index', page=1, type=current_type, search=current_search) }}">1</a>
+            </li>
+            {% if page > 4 %}
+            <li class="page-item disabled">
+                <span class="page-link">...</span>
+            </li>
+            {% endif %}
+            {% endif %}
+            
+            <!-- Show pages around current page -->
+            {% set start_page = [1, page - 1]|max %}
+            {% set end_page = [total_pages, page + 1]|min %}
+            
+            {% for p in range(start_page, end_page + 1) %}
+            <li class="page-item {% if p == page %}active{% endif %}">
+                {% if p == page %}
+                <span class="page-link">{{ p }}</span>
+                {% else %}
+                <a class="page-link" href="{{ url_for('browse.index', page=p, type=current_type, search=current_search) }}">{{ p }}</a>
+                {% endif %}
+            </li>
+            {% endfor %}
+            
+            <!-- Show last page if not in range -->
+            {% if page < total_pages - 2 %}
+            {% if page < total_pages - 3 %}
+            <li class="page-item disabled">
+                <span class="page-link">...</span>
+            </li>
+            {% endif %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('browse.index', page=total_pages, type=current_type, search=current_search) }}">{{ total_pages }}</a>
+            </li>
+            {% endif %}
+            
+            {% if has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('browse.index', page=page+1, type=current_type, search=current_search) }}" title="下一页">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link"><i class="fas fa-chevron-right"></i></span>
+            </li>
+            {% endif %}
+        </ul>
+        
+        <!-- Desktop Page Jump -->
+        <div class="desktop-page-jump text-center">
+            <div class="card border-0 bg-light">
+                <div class="card-body py-3">
+                    <form method="get" class="d-flex align-items-center justify-content-center gap-3" id="desktopPageJumpForm">
+                        {% if current_type %}<input type="hidden" name="type" value="{{ current_type }}">{% endif %}
+                        {% if current_search %}<input type="hidden" name="search" value="{{ current_search }}">{% endif %}
+                        
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fas fa-share-square text-primary"></i>
+                            <span class="text-muted fw-medium">快速跳转到第</span>
+                            <input type="number" name="page" class="form-control text-center desktop-jump-input" 
+                                    min="1" max="{{ total_pages }}" placeholder="{{ page }}" title="输入页码">
+                            <span class="text-muted fw-medium">页</span>
+                            <button type="submit" class="btn btn-primary btn-sm px-3">
+                                <i class="fas fa-arrow-right me-1"></i>跳转
+                            </button>
+                        </div>
+                        
+                        <div class="text-muted small">
+                            <i class="fas fa-info-circle me-1"></i>
+                            共 {{ total_pages }} 页
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Mobile Pagination -->
+    <div class="pagination-mobile d-md-none">
+        <!-- Previous/Next Navigation -->
+        <div class="mobile-nav-controls mb-3">
+            <div class="row g-2">
+                <div class="col-4">
+                    {% if has_prev %}
+                    <a href="{{ url_for('browse.index', page=page-1, type=current_type, search=current_search) }}" class="btn btn-outline-primary btn-sm w-100">
+                        <i class="fas fa-chevron-left"></i><br><small>上一页</small>
+                    </a>
+                    {% else %}
+                    <button class="btn btn-outline-secondary btn-sm w-100" disabled>
+                        <i class="fas fa-chevron-left"></i><br><small>上一页</small>
+                    </button>
+                    {% endif %}
+                </div>
+                
+                <div class="col-4 text-center">
+                    <div class="page-indicator">
+                        <div class="current-page">{{ page }}</div>
+                        <div class="total-pages">共 {{ total_pages }} 页</div>
                     </div>
+                </div>
+                
+                <div class="col-4">
+                    {% if has_next %}
+                    <a href="{{ url_for('browse.index', page=page+1, type=current_type, search=current_search) }}" class="btn btn-outline-primary btn-sm w-100">
+                        <i class="fas fa-chevron-right"></i><br><small>下一页</small>
+                    </a>
+                    {% else %}
+                    <button class="btn btn-outline-secondary btn-sm w-100" disabled>
+                        <i class="fas fa-chevron-right"></i><br><small>下一页</small>
+                    </button>
+                    {% endif %}
                 </div>
             </div>
         </div>
         
-        <!-- Mobile Pagination -->
-        <div class="pagination-mobile d-md-none">
-            <!-- Previous/Next Navigation -->
-            <div class="mobile-nav-controls mb-3">
-                <div class="row g-2">
-                    <div class="col-4">
-                        {% if has_prev %}
-                        <a href="{{ url_for('browse.index', page=page-1, type=current_type, search=current_search) }}" class="btn btn-outline-primary btn-sm w-100">
-                            <i class="fas fa-chevron-left"></i><br><small>上一页</small>
-                        </a>
-                        {% else %}
-                        <button class="btn btn-outline-secondary btn-sm w-100" disabled>
-                            <i class="fas fa-chevron-left"></i><br><small>上一页</small>
-                        </button>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="col-4 text-center">
-                        <div class="page-indicator">
-                            <div class="current-page">{{ page }}</div>
-                            <div class="total-pages">共 {{ total_pages }} 页</div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-4">
-                        {% if has_next %}
-                        <a href="{{ url_for('browse.index', page=page+1, type=current_type, search=current_search) }}" class="btn btn-outline-primary btn-sm w-100">
-                            <i class="fas fa-chevron-right"></i><br><small>下一页</small>
-                        </a>
-                        {% else %}
-                        <button class="btn btn-outline-secondary btn-sm w-100" disabled>
-                            <i class="fas fa-chevron-right"></i><br><small>下一页</small>
-                        </button>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Page Jump -->
-            <div class="page-jump-mobile text-center">
-                <form method="get" class="d-flex align-items-center justify-content-center gap-2">
-                    {% if current_type %}<input type="hidden" name="type" value="{{ current_type }}">{% endif %}
-                    {% if current_search %}<input type="hidden" name="search" value="{{ current_search }}">{% endif %}
-                    <span class="jump-label">跳转到第</span>
-                    <input type="number" name="page" class="form-control form-control-sm text-center" 
-                           style="width: 60px;" min="1" max="{{ total_pages }}" placeholder="{{ page }}">
-                    <span class="jump-label">页</span>
-                    <button type="submit" class="btn btn-primary btn-sm">确定</button>
-                </form>
-            </div>
+        <!-- Page Jump -->
+        <div class="page-jump-mobile text-center">
+            <form method="get" class="d-flex align-items-center justify-content-center gap-2">
+                {% if current_type %}<input type="hidden" name="type" value="{{ current_type }}">{% endif %}
+                {% if current_search %}<input type="hidden" name="search" value="{{ current_search }}">{% endif %}
+                <span class="jump-label">跳转到第</span>
+                <input type="number" name="page" class="form-control form-control-sm text-center" 
+                        style="width: 60px;" min="1" max="{{ total_pages }}" placeholder="{{ page }}">
+                <span class="jump-label">页</span>
+                <button type="submit" class="btn btn-primary btn-sm">确定</button>
+            </form>
         </div>
     </div>
-</nav>
+</div>
 
 {% else %}
 <div class="text-center py-5">
@@ -546,109 +493,6 @@
 </div>
 {% endif %}
 
-<!-- Advanced Filter Modal -->
-<div class="modal fade" id="advancedFilterModal" tabindex="-1" aria-labelledby="advancedFilterModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="advancedFilterModalLabel">
-                    <i class="fas fa-sliders-h text-primary"></i> 高级筛选设置
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="advancedFilterForm">
-                    <div class="row g-4">
-                        <!-- Question Type Filter -->
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">
-                                <i class="fas fa-tag text-primary"></i> 题目类型
-                            </label>
-                            <div class="advanced-filter-group">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="advancedType" value="all" id="advancedTypeAll" checked>
-                                    <label class="form-check-label" for="advancedTypeAll">全部类型</label>
-                                </div>
-                                {% for type in available_types %}
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="advancedType" value="{{ type }}" id="advancedType{{ loop.index }}">
-                                    <label class="form-check-label" for="advancedType{{ loop.index }}">{{ type }}</label>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        
-                        <!-- Difficulty Filter -->
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">
-                                <i class="fas fa-chart-line text-warning"></i> 难度等级
-                            </label>
-                            <div class="advanced-filter-group">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="difficulty" value="简单" id="difficultyEasy">
-                                    <label class="form-check-label text-success" for="difficultyEasy">
-                                        <i class="fas fa-chevron-down me-1"></i>简单
-                                    </label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="difficulty" value="中等" id="difficultyMedium">
-                                    <label class="form-check-label text-warning" for="difficultyMedium">
-                                        <i class="fas fa-minus me-1"></i>中等
-                                    </label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="difficulty" value="困难" id="difficultyHard">
-                                    <label class="form-check-label text-danger" for="difficultyHard">
-                                        <i class="fas fa-chevron-up me-1"></i>困难
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Category Filter -->
-                        <div class="col-12">
-                            <label class="form-label fw-bold">
-                                <i class="fas fa-folder text-info"></i> 题目分类
-                            </label>
-                            <div class="advanced-filter-group">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" name="category" value="all" id="categoryAll" checked>
-                                            <label class="form-check-label" for="categoryAll">全部分类</label>
-                                        </div>
-                                    </div>
-                                    <!-- Categories will be populated dynamically if needed -->
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Search Within Results -->
-                        <div class="col-12">
-                            <label class="form-label fw-bold">
-                                <i class="fas fa-search text-secondary"></i> 精确搜索
-                            </label>
-                            <input type="text" class="form-control" id="advancedSearchInput" 
-                                   placeholder="在筛选结果中进一步搜索..." value="{{ current_search or '' }}">
-                            <div class="form-text">支持题目内容、题号等关键词搜索</div>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="resetAdvancedFilter()">
-                    <i class="fas fa-undo"></i> 重置
-                </button>
-                <button type="button" class="btn btn-outline-danger" onclick="clearAllAdvancedFilters()">
-                    <i class="fas fa-times"></i> 清除筛选
-                </button>
-                <button type="button" class="btn btn-primary" onclick="applyAdvancedFilter()">
-                    <i class="fas fa-check"></i> 应用筛选
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block styles %}

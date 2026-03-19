@@ -661,6 +661,166 @@ def get_last_unfinished_exam(user_id):
     ''', (user_id,))
     return c.fetchone()
 
+# ========== 修改题目 ===========
+def get_question_by_id(question_id):
+    """
+    根据题目ID获取题目详情
+    
+    Args:
+        question_id (str): 题目ID
+        
+    Returns:
+        dict or None: 题目信息字典，如果不存在返回None
+    """
+    conn = get_db()
+    c = conn.cursor()
+    
+    try:
+        c.execute('''
+            SELECT id, stem, answer, difficulty, qtype, category, options, bank_name
+            FROM questions 
+            WHERE id = ?
+        ''', (question_id,))
+        
+        row = c.fetchone()
+        if row:
+            question = {
+                'id': row['id'],
+                'stem': row['stem'],
+                'answer': row['answer'],
+                'difficulty': row['difficulty'],
+                'qtype': row['qtype'],
+                'category': row['category'],
+                'options': json.loads(row['options']) if row['options'] else {},
+                'bank_name': row['bank_name']
+            }
+            return question
+        return None
+    except Exception as e:
+        print(f"Error getting question by ID: {e}")
+        return None
+    
+def update_question_in_db(question_id, updated_data):
+    """
+    更新数据库中的题目信息
+    
+    Args:
+        question_id (str): 题目ID
+        updated_data (dict): 更新后的题目数据
+        
+    Returns:
+        bool: 是否成功更新
+    """
+    conn = get_db()
+    c = conn.cursor()
+    
+    try:
+        # 获取题目原来的信息（用于获取bank_name）
+        c.execute('SELECT bank_name FROM questions WHERE id = ?', (question_id,))
+        row = c.fetchone()
+        if not row:
+            return False
+        
+        bank_name = row['bank_name']
+
+        # 准备更新数据
+        stem = updated_data.get('stem', '')
+        answer = updated_data.get('answer', '')
+        difficulty = updated_data.get('difficulty', '未知')
+        qtype = updated_data.get('qtype', '未知')
+        category = updated_data.get('category', '未分类')
+        options = json.dumps(updated_data.get('options', {}), ensure_ascii=False)
+
+        # 更新数据库
+        c.execute('''
+            UPDATE questions 
+            SET stem = ?, answer = ?, difficulty = ?, qtype = ?, category = ?, options = ?
+            WHERE id = ?
+        ''', (stem, answer, difficulty, qtype, category, options, question_id))
+        
+        conn.commit()
+        db_logger.info(f"Updated question {question_id} in database")
+        
+        # 同步更新CSV文件
+        success = update_question_in_csv(bank_name, question_id, updated_data)
+        if not success:
+            db_logger.warning(f"Failed to update CSV for question {question_id}")
+        
+        return True
+    except Exception as e:
+        print(f"Error updating question in database: {e}")
+        db_logger.error(f"Error updating question {question_id}: {e}")
+        conn.rollback()
+        return False
+def update_question_in_csv(bank_name, question_id, updated_data):
+    """
+    更新CSV文件中的题目信息
+    
+    Args:
+        bank_name (str): 题库名称（不带.csv后缀）
+        question_id (str): 题目ID
+        updated_data (dict): 更新后的题目数据
+        
+    Returns:
+        bool: 是否成功更新
+    """
+    try:
+        # 构建CSV文件路径
+        csv_file = os.path.join('./questions-bank', f"{bank_name}.csv")
+        
+        if not os.path.exists(csv_file):
+            print(f"CSV file not found: {csv_file}")
+            return False
+        
+        # 读取CSV文件
+        with open(csv_file, 'r', encoding='utf-8-sig') as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+            fieldnames = reader.fieldnames
+        
+        # 查找要更新的行
+        updated = False
+        for i, row in enumerate(rows):
+            # 从题目ID中提取原始题号（去掉bank_name_前缀）
+            original_id = question_id.replace(f"{bank_name}_", "")
+            if row.get('题号') == original_id:
+                # 更新行数据
+                rows[i]['题干'] = updated_data.get('stem', row.get('题干', ''))
+                rows[i]['答案'] = updated_data.get('answer', row.get('答案', ''))
+                rows[i]['难度'] = updated_data.get('difficulty', row.get('难度', '未知'))
+                rows[i]['题型'] = updated_data.get('qtype', row.get('题型', '未知'))
+                rows[i]['类别'] = updated_data.get('category', row.get('类别', '未分类'))
+                
+                # 更新选项
+                options = updated_data.get('options', {})
+                for opt in ['A', 'B', 'C', 'D', 'E']:
+                    if opt in options:
+                        rows[i][opt] = options[opt]
+                    elif opt in rows[i]:
+                        # 如果新的options中没有这个选项，但CSV中有，清空它
+                        rows[i][opt] = ''
+                
+                updated = True
+                break
+        
+        if not updated:
+            print(f"Question {question_id} not found in CSV file")
+            return False
+        
+        # 写回CSV文件
+        with open(csv_file, 'w', encoding='utf-8-sig', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+        
+        db_logger.info(f"Updated question {question_id} in CSV file {bank_name}.csv")
+        return True
+        
+    except Exception as e:
+        print(f"Error updating CSV file: {e}")
+        db_logger.error(f"Error updating CSV for question {question_id}: {e}")
+        return False
+
 # ================= 数据库日志配置 =================
 def setup_db_logger():
     """设置数据库专用日志记录器"""

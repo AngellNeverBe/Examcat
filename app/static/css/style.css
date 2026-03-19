@@ -984,6 +984,13 @@ input[type="radio"] {
   font-weight: 500;
 }
 
+.alert-noflash {
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border-radius: var(--border-radius);
+  font-weight: 500;
+}
+
 .alert-success {
   background-color: rgba(46, 196, 182, 0.2);
   color: #1a8a7e;
