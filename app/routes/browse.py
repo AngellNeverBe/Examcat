@@ -364,11 +364,24 @@ def edit_question(question_id):
     
     # 获取可用的题型、难度和分类选项（用于下拉菜单）
     c.execute('SELECT DISTINCT qtype FROM questions WHERE bank_name = ? AND qtype IS NOT NULL AND qtype != ""', (current_bank,))
-    available_types = [row['qtype'] for row in c.fetchall()]
-    
+    existing_types = [row['qtype'] for row in c.fetchall()]
+
+    # 确保至少包含单选题和多选题，同时保持其他已有题型
+    standard_types = ['单选题', '多选题']
+    # 合并并去重，标准题型放在前面
+    all_types_set = set(existing_types)
+    all_types_set.update(standard_types)
+    available_types = list(all_types_set)
+
     c.execute('SELECT DISTINCT difficulty FROM questions WHERE bank_name = ? AND difficulty IS NOT NULL AND difficulty != ""', (current_bank,))
-    available_difficulties = [row['difficulty'] for row in c.fetchall()]
-    
+    existing_difficulties = [row['difficulty'] for row in c.fetchall()]
+
+    # 确保至少包含常见的难度等级
+    standard_difficulties = ['简单', '中等', '困难']
+    all_difficulties_set = set(existing_difficulties)
+    all_difficulties_set.update(standard_difficulties)
+    available_difficulties = list(all_difficulties_set)
+
     c.execute('SELECT DISTINCT category FROM questions WHERE bank_name = ? AND category IS NOT NULL AND category != ""', (current_bank,))
     available_categories = [row['category'] for row in c.fetchall()]
     
