@@ -203,24 +203,36 @@
 </div>
 
 {% else %}
+{% block confetti %}
+<div id="confetti-container"></div>
+{% endblock %}
 <!-- 题库做完 -->
 <div class="card text-center py-5">
     <div class="empty-state">
         <i class="fas fa-check-circle" style="font-size: 4rem; color: var(--success-color); margin-bottom: 1.5rem;"></i>
         <h2 class="mb-3">恭喜！您已经回答了所有题目</h2>
         <p class="mb-4">您可以重置答题历史，或者尝试其他学习模式</p>
+        <div class="confetti d-flex gap-2 justify-content-center flex-wrap mt-3 mb-3">
+            
+        </div>
         <div class="d-flex gap-2 justify-content-center flex-wrap">
-            <form method="post" action="{{ url_for('main.reset_history') }}">
-                <button type="submit" class="btn btn-warning" onclick="return confirm('确定要重置答题历史吗？此操作不可恢复。')">
-                    <i class="fas fa-redo"></i> 重置答题历史
-                </button>
-            </form>
-            <a href="{{ url_for('questions.wrong_questions') }}" class="btn btn-danger">
+            <button class="btn btn-success" id="confetti-button">🎉 庆祝！</button>
+            <a href="{{ url_for('questions.show_sequential_question', qid=next_qid) }}" class="btn btn-outline-primary">
+                <i class="fas fa-list-ol"></i> 从头刷题
+            </a>
+            <a href="{{ url_for('questions.wrong_start') }}" class="btn btn-warning">
                 <i class="fas fa-times-circle"></i> 练习错题
             </a>
             <a href="{{ url_for('main.index') }}" class="btn btn-primary">
                 <i class="fas fa-home"></i> 返回首页
             </a>
+        </div>
+        <div class="d-flex gap-2 justify-content-center flex-wrap mt-3"></div>
+            <form method="post" action="{{ url_for('main.reset_history') }}">
+                <button type="submit" class="btn btn-danger" onclick="return confirm('确定要重置答题历史吗？此操作不可恢复。')">
+                    <i class="fas fa-redo"></i> 重置答题历史(包括错题！)
+                </button>
+            </form>
         </div>
     </div>
 </div>
@@ -230,4 +242,9 @@
 
 {% block styles %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/question.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/confetti.css') }}">
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/confetti.js') }}"></script>
 {% endblock %}

@@ -116,3 +116,11 @@ select {
     cursor: url('/static/cursors/link.cur') 8 0, pointer !important;
 }
 
+/* live2d */
+#waifu-tool,
+#waifu-tool span,
+#waifu-tool svg,
+#waifu-tool path,
+#live2d {
+    cursor: url('/static/cursors/link.cur') 8 0, pointer !important;
+}

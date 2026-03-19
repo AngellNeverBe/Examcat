@@ -6,7 +6,7 @@ import random
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 from ..utils.auth import login_required, get_user_id
 from ..utils.questions import fetch_question, random_question_id, is_favorite
-from ..utils.database import get_db, get_current_bank, get_current_question_id, extract_qid_number, get_next_question_id, db_logger
+from ..utils.database import get_db, get_current_bank, get_current_question_id, extract_qid_number, get_next_question_id, db_logger, get_question_count, restore_qid
 
 questions_bp = Blueprint('questions', __name__, template_folder='../templates/base')
 
@@ -66,18 +66,7 @@ def show(qid):
         return redirect(url_for('main.index'))
     
     # Calculate next question ID
-    next_qid = None
-    try:
-        # Extract number from current question ID
-        current_number = extract_qid_number(qid)
-        if current_number:
-            # Convert to integer, add 1, and create new question ID
-            next_number = current_number + 1
-            next_qid = f"{current_bank}_{next_number}"
-    except (ValueError, TypeError) as e:
-        # Log error but continue execution
-        db_logger.warning(f"Error calculating next_qid for {qid}: {e}")
-        next_qid = None
+    next_qid = get_next_question_id(qid, current_bank)
 
     # Handle form submission (answer)
     if request.method == 'POST':
@@ -407,10 +396,43 @@ def show_sequential_question(qid):
     q = fetch_question(qid)
     
     if q is None:
-        flash("题目不存在", "error")
-        db_logger.error(f"[{os.getpid()}] questions.show_sq: 用户{user_id}, 题目{qid}")
-
-        return redirect(url_for('main.index'))
+        conn = get_db()
+        c = conn.cursor()
+        
+        # 获取题库总题数
+        total = get_question_count(conn, current_bank)        
+        # 提取当前题目ID的数字部分
+        current_number = extract_qid_number(qid)        
+        # 判断是否为数字ID超过总题数的情况
+        if current_number and current_number > total:
+            # 设置为第一题
+            next_qid = restore_qid(current_bank)
+            # Update current_seq_qid to the current question
+            c.execute('UPDATE users SET current_seq_qid = ? WHERE id = ?', (next_qid, user_id))
+            conn.commit()
+            # 获取进度统计
+            c.execute('SELECT COUNT(*) AS total FROM questions WHERE bank_name = ?', (current_bank,))
+            total = c.fetchone()['total']
+            c.execute('''
+                SELECT COUNT(DISTINCT h.question_id) AS answered 
+                FROM history h 
+                JOIN questions q ON h.question_id = q.id 
+                WHERE h.user_id = ? AND q.bank_name = ?
+            ''', (user_id, current_bank))
+            answered = c.fetchone()['answered']
+            
+            return render_template('question.html',
+                                  question=None,
+                                  next_qid=next_qid,
+                                  sequential_mode=True,
+                                  answered=answered,
+                                  total=total,
+                                  current_bank=current_bank)
+        else:
+            # 其他错误情况
+            flash("题目不存在", "error")
+            db_logger.error(f"[{os.getpid()}] questions.show_sq: 用户{user_id}, 题目{qid}")
+            return redirect(url_for('main.index'))
 
     # Verify the question belongs to current bank
     if q.get('bank_name') != current_bank:
@@ -446,7 +468,7 @@ def show_sequential_question(qid):
                   (user_id, qid, user_answer_str, correct, current_bank))
         db_logger.info(f"[{os.getpid()}] Add history: 用户{user_id}, 题目{qid}, 答案{user_answer_str}, 正确{correct}")
         
-        next_qid = get_next_question_id(conn, user_id, current_bank)
+        next_qid = get_next_question_id(qid, current_bank)
         
         if next_qid:
             # 更新current_seq_qid为下一题

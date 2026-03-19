@@ -399,11 +399,10 @@ def set_current_bank(user_id, bank_name):
     # 更新当前题库
     c.execute('UPDATE users SET current_bank = ? WHERE id = ?', (bank_name, user_id))
     # 为新题库计算新的当前题目ID
-    next_qid = get_next_question_id(conn, user_id, bank_name)
+    next_qid = restore_qid(bank_name)
     if next_qid:
         c.execute('UPDATE users SET current_seq_qid = ? WHERE id = ?', (next_qid, user_id))
-    
-    conn.commit()
+        conn.commit()
     
 
 def load_questions_to_db(conn, bank_name):
@@ -504,69 +503,57 @@ def get_current_question_id(user_id):
     c.execute('SELECT current_bank, current_seq_qid FROM users WHERE id = ?', (user_id,))
     row = c.fetchone()
     if not row:
-        print('yes')
-        
         return None
     
     bank_name = row['current_bank']
     current_qid = row['current_seq_qid']
-    
-    
+
     # 如果current_qid为None，计算下一个题目
     if current_qid is None:
-        next_qid = get_next_question_id(conn, user_id, bank_name)
+        next_qid = restore_qid(bank_name)
         if next_qid:
             c.execute('UPDATE users SET current_seq_qid = ? WHERE id = ?', (next_qid, user_id))
-            conn.commit()
-        
+            conn.commit()        
         return next_qid
     
     # 检查current_qid是否属于当前题库
     c.execute('SELECT bank_name FROM questions WHERE id = ?', (current_qid,))
     q_row = c.fetchone()
     if q_row and q_row['bank_name'] == bank_name:
-        # 当前题目ID有效
-        
+        # 当前题目ID有效        
         return current_qid
     else:
         # 当前题目ID不属于当前题库，重新计算
-        next_qid = get_next_question_id(conn, user_id, bank_name)
+        next_qid = restore_qid(bank_name)
         if next_qid:
             c.execute('UPDATE users SET current_seq_qid = ? WHERE id = ?', (next_qid, user_id))
-            conn.commit()
-        
+            conn.commit()        
+        return next_qid
+    
+def get_next_question_id(qid, bank_name):
+    """获取用户在题库中下一个应该做的题号"""
+    next_qid = None
+    try:
+        # Extract number from current question ID
+        current_number = extract_qid_number(qid)
+        if current_number:
+            # Convert to integer, add 1, and create new question ID
+            next_number = current_number + 1
+            next_qid = restore_qid(bank_name, next_number)
+            return next_qid
+
+    except (ValueError, TypeError) as e:
+        # Log error but continue execution
+        db_logger.warning(f"Error calculating next_qid for {qid}: {e}")
+        next_qid = None
         return next_qid
 
-def get_next_question_id(conn, user_id, bank_name):
-    """获取用户在题库中下一个应该做的题号（按数字顺序）"""
+def get_question_count(conn, bank_name):
+    """获取题库总题数"""
     c = conn.cursor()
-    
-    # 获取当前题库所有题目ID
-    c.execute('SELECT id FROM questions WHERE bank_name = ?', (bank_name,))
-    all_questions = [row['id'] for row in c.fetchall()]
-    
-    # 获取用户已做题目ID（仅限当前题库）
-    c.execute('''
-        SELECT DISTINCT question_id 
-        FROM history 
-        WHERE user_id = ? AND bank_name = ?
-    ''', (user_id, bank_name))
-    answered_questions = [row['question_id'] for row in c.fetchall()]
-    
-    # 找出未做题目
-    unanswered = [qid for qid in all_questions if qid not in answered_questions]
-    
-    if unanswered:
-        # 按数字部分排序
-        unanswered.sort(key=extract_qid_number)
-        return unanswered[0]
-    else:
-        # 所有题目都已做，返回第一个题目
-        if all_questions:
-            all_questions.sort(key=extract_qid_number)
-            return all_questions[0]
-    
-    return None
+    c.execute('SELECT COUNT(*) as total FROM questions WHERE bank_name = ?', (bank_name,))
+    result = c.fetchone()
+    return result['total'] if result else 0
 
 def get_bank_progress(user_id, bank_name):
     """获取用户在指定题库的完成进度"""
@@ -574,9 +561,7 @@ def get_bank_progress(user_id, bank_name):
     c = conn.cursor()
     
     # 获取题库总题数
-    c.execute('SELECT COUNT(*) as total FROM questions WHERE bank_name = ?', (bank_name,))
-    total_row = c.fetchone()
-    total = total_row['total'] if total_row else 0
+    total = get_question_count(conn, bank_name)
     
     # 获取用户已做题数 - 使用新的bank_name字段确保准确性
     c.execute('''
@@ -586,8 +571,6 @@ def get_bank_progress(user_id, bank_name):
     ''', (user_id, bank_name))
     answered_row = c.fetchone()
     answered = answered_row['answered'] if answered_row else 0
-    
-    
     
     # 计算进度百分比
     progress = answered / total if total > 0 else 0
@@ -617,6 +600,38 @@ def extract_qid_number(qid):
     except ValueError:
         # 如果无法转换为数字，返回0确保排序在最后
         return 0
+
+def restore_qid(bank_name: str, id: int = 1) -> str:
+    """
+    将题库名和纯数字 ID 组合成新的 QID。
+    
+    参数:
+        bank_name: 字符串，表示题库名。
+        id: 整数，表示数字 ID，默认为 1。
+    
+    返回:
+        字符串，格式为 "bankname_id"，其中 bankname 是 bank_name 的字符串形式，
+        id 是数字 ID 的字符串形式，用下划线连接。
+    
+    示例:
+        >>> restore_qid("math", 1)
+        'math_1'
+        >>> restore_qid("physics")
+        'physics_1'
+    
+    注意:
+        - 函数会自动将输入转换为字符串，以确保兼容性。
+        - 如果 bank_name 为 None 或空，会转换为字符串 "None" 或空字符串。
+        - id 应为整数，但函数会处理非整数输入（如字符串数字），将其转换为字符串。
+    """
+    # 确保 bank_name 转换为字符串，处理可能的 None 或其他类型
+    bank_name_str = str(bank_name) if bank_name is not None else "None"
+    
+    # 确保 id 转换为字符串，虽然 id 应为整数，但为健壮性处理其他类型
+    id_str = str(id)
+    
+    # 使用下划线连接并返回
+    return f"{bank_name_str}_{id_str}"
 
 def get_last_unfinished_exam(user_id):
     """
