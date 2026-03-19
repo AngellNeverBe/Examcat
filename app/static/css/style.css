@@ -517,6 +517,18 @@ input[type="radio"] {
   color: var(--gray-800);
 }
 
+.question-stats {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: baseline;
+  color: var(--gray-800);
+}
+
 .options-list {
   list-style: none;
   margin: 0;

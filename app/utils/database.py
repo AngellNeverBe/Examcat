@@ -555,6 +555,64 @@ def get_question_count(conn, bank_name):
     result = c.fetchone()
     return result['total'] if result else 0
 
+def get_question_stats(conn, question_id):
+    """
+    获取题目的答题统计信息
+    
+    Args:
+        question_id (str): 题目ID
+        
+    Returns:
+        dict: 包含统计信息的字典，格式为：
+            {
+                'total_answered': 总答题次数,
+                'total_correct': 正确答题次数,
+                'accuracy': 正确率(0-100)
+            }
+    """
+    c = conn.cursor()
+    
+    try:
+        # 统计该题目的总答题次数和正确次数
+        c.execute('''
+            SELECT 
+                COUNT(*) as total_answered,
+                SUM(correct) as total_correct
+            FROM history 
+            WHERE question_id = ?
+        ''', (question_id,))
+        
+        row = c.fetchone()
+        
+        if row and row['total_answered']:
+            total_answered = row['total_answered']
+            total_correct = row['total_correct'] if row['total_correct'] else 0
+            
+            # 计算正确率（百分比，保留1位小数）
+            accuracy = round((total_correct / total_answered) * 100, 1) if total_answered > 0 else 0.0
+            
+            return {
+                'total_answered': total_answered,
+                'total_correct': total_correct,
+                'accuracy': accuracy
+            }
+        else:
+            # 如果还没有答题记录，返回0值
+            return {
+                'total_answered': 0,
+                'total_correct': 0,
+                'accuracy': 0.0
+            }
+            
+    except Exception as e:
+        db_logger.error(f"Error getting question stats for {question_id}: {e}")
+        # 发生错误时返回默认值
+        return {
+            'total_answered': 0,
+            'total_correct': 0,
+            'accuracy': 0.0
+        }
+
 def get_bank_progress(user_id, bank_name):
     """获取用户在指定题库的完成进度"""
     conn = get_db()

@@ -28,6 +28,10 @@
     padding: 2rem;
 }
 
+.stats-number {
+    color: var(--gray-600);
+}
+
 @media (max-width: 768px) {
     .question-header {
         flex-direction: column;

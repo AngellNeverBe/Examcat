@@ -6,7 +6,7 @@ import random
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 from ..utils.auth import login_required, get_user_id
 from ..utils.questions import fetch_question, random_question_id, is_favorite
-from ..utils.database import get_db, get_current_bank, get_current_question_id, extract_qid_number, get_next_question_id, db_logger, get_question_count, restore_qid
+from ..utils.database import get_db, get_current_bank, get_current_question_id, extract_qid_number, get_next_question_id, db_logger, get_question_count, restore_qid, get_question_stats
 
 questions_bp = Blueprint('questions', __name__, template_folder='../templates/base')
 
@@ -67,6 +67,7 @@ def show(qid):
     
     # Calculate next question ID
     next_qid = get_next_question_id(qid, current_bank)
+    stats = None
 
     # Handle form submission (answer)
     if request.method == 'POST':
@@ -82,6 +83,9 @@ def show(qid):
             (user_id, qid, user_answer_str, correct)
         )
         db_logger.info(f"[{os.getpid()}] Add history: 用户{user_id}, 题目{qid}, 答案{user_answer_str}, 正确{correct}")
+
+        # 获取答题统计信息
+        stats = get_question_stats(conn, qid)
         
         # Get updated stats for current bank
         c.execute('SELECT COUNT(*) AS total FROM questions WHERE bank_name = ?', (current_bank,))
@@ -108,7 +112,8 @@ def show(qid):
                               total=total,
                               next_qid=next_qid,  # 添加next_qid参数
                               is_favorite=is_fav,
-                              current_bank=current_bank)
+                              current_bank=current_bank,
+                              stats=stats)
 
     # Handle GET request
     conn = get_db()
@@ -286,6 +291,7 @@ def show_wrong_question(qid):
     next_qid = None
     result_msg = None
     user_answer_str = ""
+    stats = None
     
     conn = get_db()
     c = conn.cursor()
@@ -301,6 +307,9 @@ def show_wrong_question(qid):
                   'VALUES (?,?,?,?)',
                   (user_id, qid, user_answer_str, correct))
         db_logger.info(f"[{os.getpid()}] Add history: 用户{user_id}, 题目{qid}, 答案{user_answer_str}, 正确{correct}")
+        
+        # 获取答题统计信息
+        stats = get_question_stats(conn, qid)
         
         # If answered correctly, remove from wrong questions list for next navigation
         conn.commit()
@@ -370,7 +379,8 @@ def show_wrong_question(qid):
                           total=total_wrong,
                           wrong_progress=f"{current_position}/{total_wrong}",  # Progress for wrong questions
                           is_favorite=is_fav,
-                          current_bank=current_bank)
+                          current_bank=current_bank,
+                          stats=stats)
 
 @questions_bp.route('/sequential_start')
 @login_required
@@ -448,7 +458,8 @@ def show_sequential_question(qid):
     next_qid = None
     result_msg = None
     user_answer_str = ""
-    
+    stats = None
+
     conn = get_db()
     c = conn.cursor()
     
@@ -467,6 +478,9 @@ def show_sequential_question(qid):
                   'VALUES (?,?,?,?,?)',
                   (user_id, qid, user_answer_str, correct, current_bank))
         db_logger.info(f"[{os.getpid()}] Add history: 用户{user_id}, 题目{qid}, 答案{user_answer_str}, 正确{correct}")
+
+        # 获取答题统计信息
+        stats = get_question_stats(conn, qid)
         
         next_qid = get_next_question_id(qid, current_bank)
         
@@ -533,4 +547,5 @@ def show_sequential_question(qid):
                           answered=answered,
                           total=total,
                           is_favorite=is_fav,
-                          current_bank=current_bank)
+                          current_bank=current_bank,
+                          stats=stats)

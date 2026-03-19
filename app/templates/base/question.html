@@ -42,6 +42,19 @@
             {% if question.category %}
                 <span class="badge badge-primary">{{ question.category }}</span>
             {% endif %}
+            {% if result_msg and stats %}
+                <span class="question-stats">
+                    本题总共回答<span class="stats-number"> {{ stats.total_answered }} </span>次，
+                    正确<span class="stats-number"> {{ stats.total_correct }} </span>次，
+                    总正确率<span class="stats-accuracy 
+                        {% if stats.accuracy >= 80 %}text-success
+                        {% elif stats.accuracy >= 60 %}text-warning
+                        {% else %}text-danger
+                        {% endif %}">
+                        {{ stats.accuracy }}%
+                    </span>
+                </span>
+            {% endif %}
         </div>
         
         <div class="question-actions-top">
