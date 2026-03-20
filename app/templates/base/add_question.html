@@ -1,0 +1,258 @@
+{% extends 'base.html' %}
+
+{% block title %}新增题目 | {{ config.TITLE }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- 返回按钮 -->
+            <div class="mb-4">
+                <a href="{{ url_for('browse.index') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> 返回浏览
+                </a>
+            </div>
+            
+            <!-- 新增题目卡片 -->
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-plus-circle"></i> 新增题目
+                        <span class="badge bg-light text-dark ms-2">{{ current_bank }}</span>
+                    </h4>
+                </div>
+                
+                <div class="card-body">
+                    <form method="post" id="addQuestionForm">
+                        <!-- 题目基本信息 -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="qtype" class="form-label fw-bold">
+                                        <i class="fas fa-tag"></i> 题型 <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select" id="qtype" name="qtype" required>
+                                        <option value="">请选择题型</option>
+                                        {% for type in available_types %}
+                                        <option value="{{ type }}">{{ type }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="difficulty" class="form-label fw-bold">
+                                        <i class="fas fa-chart-line"></i> 难度
+                                    </label>
+                                    <select class="form-select" id="difficulty" name="difficulty">
+                                        <option value="未知">请选择难度</option>
+                                        {% for difficulty in available_difficulties %}
+                                        <option value="{{ difficulty }}">{{ difficulty }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 题干 -->
+                        <div class="form-group mb-4">
+                            <label for="stem" class="form-label fw-bold">
+                                <i class="fas fa-question-circle"></i> 题干 <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control" id="stem" name="stem" 
+                                      rows="5" required placeholder="请输入题目内容..." 
+                                      style="min-height: 120px;"></textarea>
+                            <div class="form-text">支持多行文本，请清晰描述问题</div>
+                        </div>
+                        
+                        <!-- 选项（如果是选择题） -->
+                        <div class="mb-4" id="optionsSection">
+                            <h5 class="mb-3">
+                                <i class="fas fa-list-ul"></i> 选项
+                                <small class="text-muted">（非选择题可留空）</small>
+                            </h5>
+                            
+                            <div class="row g-3">
+                                {% for opt in ['A', 'B', 'C', 'D', 'E'] %}
+                                <div class="col-md-12">
+                                    <div class="input-group">
+                                        <span class="input-group-text" style="width: 40px;">{{ opt }}</span>
+                                        <input type="text" class="form-control option-input" 
+                                               id="option_{{ opt }}" 
+                                               name="option_{{ opt }}"
+                                               placeholder="选项 {{ opt }} 内容"
+                                               data-option="{{ opt }}">
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            
+                            <div class="form-text mt-2">
+                                <i class="fas fa-lightbulb"></i> 提示：多选题答案用逗号分隔，如：A,B,C
+                            </div>
+                        </div>
+                        
+                        <!-- 答案和分类 -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="answer" class="form-label fw-bold">
+                                        <i class="fas fa-check-circle"></i> 正确答案 <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="answer" 
+                                           name="answer" required
+                                           placeholder="例如：A 或 A,B 或 正确">
+                                    <div class="form-text">
+                                        单选题：填字母（如A）<br>
+                                        多选题：用逗号分隔（如A,B）<br>
+                                        判断题：填"正确"或"错误"<br>
+                                        填空题：填写完整答案
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="category" class="form-label fw-bold">
+                                        <i class="fas fa-folder"></i> 分类
+                                    </label>
+                                    <select class="form-select" id="category" name="category">
+                                        <option value="未分类">未分类</option>
+                                        {% for category in available_categories %}
+                                        <option value="{{ category }}">{{ category }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 表单操作按钮 -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ url_for('browse.index') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> 取消
+                            </a>
+                            <div>
+                                <button type="reset" class="btn btn-warning me-2">
+                                    <i class="fas fa-undo"></i> 重置
+                                </button>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-plus-circle"></i> 添加题目
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- 卡片页脚 -->
+                <div class="card-footer bg-light">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle"></i> 
+                        新增题目将同时保存到数据库和CSV文件，确保数据同步。
+                    </small>
+                </div>
+            </div>
+            
+            <!-- 预览区域 -->
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-eye"></i> 题目预览
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="preview-content" id="questionPreview">
+                        <p class="text-muted">填写表单内容后，这里会显示预览效果</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 实时预览功能
+    document.addEventListener('DOMContentLoaded', function() {
+        const stemInput = document.getElementById('stem');
+        const answerInput = document.getElementById('answer');
+        const qtypeSelect = document.getElementById('qtype');
+        const difficultySelect = document.getElementById('difficulty');
+        const categorySelect = document.getElementById('category');
+        const previewElement = document.getElementById('questionPreview');
+        
+        // 更新预览的函数
+        function updatePreview() {
+            const questionType = qtypeSelect.value || '未设置';
+            const questionStem = stemInput.value || '未设置';
+            const questionAnswer = answerInput.value || '未设置';
+            const questionDifficulty = difficultySelect.value || '未设置';
+            const questionCategory = categorySelect.value || '未设置';
+            
+            // 收集选项
+            let optionsHtml = '';
+            ['A', 'B', 'C', 'D', 'E'].forEach(opt => {
+                const optionInput = document.getElementById('option_' + opt);
+                if (optionInput && optionInput.value) {
+                    optionsHtml += `<li>${opt}. ${optionInput.value}</li>`;
+                }
+            });
+            
+            const previewHTML = `
+                <div class="mb-3">
+                    <strong>题型：</strong>${questionType}
+                </div>
+                <div class="mb-3">
+                    <strong>题干：</strong>
+                    <p class="mb-0">${questionStem}</p>
+                </div>
+                ${optionsHtml ? `
+                <div class="mb-3">
+                    <strong>选项：</strong>
+                    <ul class="mb-0">
+                        ${optionsHtml}
+                    </ul>
+                </div>
+                ` : ''}
+                <div class="mb-3">
+                    <strong>答案：</strong> <span class="badge bg-success">${questionAnswer}</span>
+                </div>
+                <div class="mb-3">
+                    <strong>难度：</strong> <span class="badge bg-warning">${questionDifficulty}</span>
+                </div>
+                <div class="mb-0">
+                    <strong>分类：</strong> <span class="badge bg-info">${questionCategory}</span>
+                </div>
+            `;
+            
+            previewElement.innerHTML = previewHTML;
+        }
+        
+        // 为所有输入添加事件监听
+        const inputs = [stemInput, answerInput, qtypeSelect, difficultySelect, categorySelect];
+        inputs.forEach(input => {
+            if (input) {
+                input.addEventListener('input', updatePreview);
+                input.addEventListener('change', updatePreview);
+            }
+        });
+        
+        // 为选项输入添加事件监听
+        ['A', 'B', 'C', 'D', 'E'].forEach(opt => {
+            const optionInput = document.getElementById('option_' + opt);
+            if (optionInput) {
+                optionInput.addEventListener('input', updatePreview);
+            }
+        });
+        
+        // 初始更新一次预览
+        updatePreview();
+        
+        // 自动填充示例数据（仅用于演示，生产环境应删除）
+        document.getElementById('addQuestionForm').addEventListener('reset', function() {
+            setTimeout(updatePreview, 10);
+        });
+    });
+</script>
+{% endblock %}

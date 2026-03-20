@@ -4,7 +4,7 @@ examcat - 浏览路由蓝图
 from flask import Blueprint, render_template, request, flash, redirect, url_for
 import json
 from ..utils.auth import login_required, get_user_id, admin_required
-from ..utils.database import get_db, get_current_bank, get_question_by_id, update_question_in_db
+from ..utils.database import get_db, get_current_bank, get_question_by_id, update_question_in_db, add_question_to_db, get_enhanced_types, get_enhanced_difficulties
 from ..utils.questions import is_favorite
 
 browse_bp = Blueprint('browse', __name__, url_prefix='/browse', template_folder='../templates/base')
@@ -387,6 +387,76 @@ def edit_question(question_id):
     
     return render_template('edit_question.html',
                          question=question,
+                         available_types=available_types,
+                         available_difficulties=available_difficulties,
+                         available_categories=available_categories,
+                         current_bank=current_bank)
+
+@browse_bp.route('/add', methods=['GET', 'POST'])
+@login_required
+def add_question():
+    """新增题目"""
+    user_id = get_user_id()
+    current_bank = get_current_bank(user_id)
+    
+    conn = get_db()
+    c = conn.cursor()
+    
+    if request.method == 'POST':
+        # 处理表单提交
+        stem = request.form.get('stem', '').strip()
+        answer = request.form.get('answer', '').strip()
+        difficulty = request.form.get('difficulty', '未知')
+        qtype = request.form.get('qtype', '未知')
+        category = request.form.get('category', '未分类')
+        
+        # 收集选项
+        options = {}
+        for opt in ['A', 'B', 'C', 'D', 'E']:
+            option_value = request.form.get(f'option_{opt}', '').strip()
+            if option_value:
+                options[opt] = option_value
+        
+        # 验证必填字段
+        if not stem:
+            flash('题干不能为空', 'error')
+            return redirect(url_for('browse.add_question'))
+        
+        if not answer:
+            flash('答案不能为空', 'error')
+            return redirect(url_for('browse.add_question'))
+        
+        # 准备题目数据
+        question_data = {
+            'stem': stem,
+            'answer': answer,
+            'difficulty': difficulty,
+            'qtype': qtype,
+            'category': category,
+            'options': options
+        }
+        
+        # 添加到数据库和CSV
+        success, result = add_question_to_db(current_bank, question_data)
+        
+        if success:
+            flash(f'题目添加成功！新题目ID: {result}', 'success')
+            return redirect(url_for('browse.index'))
+        else:
+            flash(f'题目添加失败: {result}', 'error')
+    
+    # 获取可用的题型、难度和分类选项
+    available_types = get_enhanced_types(c, current_bank)
+    available_difficulties = get_enhanced_difficulties(c, current_bank)
+    
+    c.execute('SELECT DISTINCT category FROM questions WHERE bank_name = ? AND category IS NOT NULL AND category != "" ORDER BY category', (current_bank,))
+    available_categories = [row['category'] for row in c.fetchall()]
+    
+    # 如果没有分类，添加默认分类
+    if not available_categories:
+        available_categories = ['未分类']
+    
+    return render_template('add_question.html',
                          available_types=available_types,
                          available_difficulties=available_difficulties,
                          available_categories=available_categories,

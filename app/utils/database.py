@@ -879,6 +879,245 @@ def update_question_in_csv(bank_name, question_id, updated_data):
         db_logger.error(f"Error updating CSV for question {question_id}: {e}")
         return False
 
+def add_question_to_db(bank_name, question_data):
+    """
+    向数据库和CSV文件添加新题目
+    
+    Args:
+        bank_name (str): 题库名称（不带.csv后缀）
+        question_data (dict): 题目数据
+        
+    Returns:
+        tuple: (成功状态, 新题目ID或错误消息)
+    """
+    conn = get_db()
+    c = conn.cursor()
+    
+    try:
+        # 1. 生成新的题目ID
+        # 获取当前题库中最大的数字ID
+        c.execute('''
+            SELECT id FROM questions 
+            WHERE bank_name = ? 
+            ORDER BY CAST(
+                CASE 
+                    WHEN instr(id, '_') > 0 THEN substr(id, instr(id, '_') + 1)
+                    ELSE id 
+                END 
+            AS INTEGER) DESC
+            LIMIT 1
+        ''', (bank_name,))
+        
+        max_id_row = c.fetchone()
+        max_num = 0
+        
+        if max_id_row:
+            # 从ID中提取数字部分
+            last_id = max_id_row['id']
+            if '_' in last_id:
+                num_part = last_id.split('_', 1)[1]
+            else:
+                num_part = last_id
+            
+            try:
+                max_num = int(num_part)
+            except ValueError:
+                max_num = 0
+        
+        # 生成新ID（数字部分+1）
+        new_id_num = max_num + 1
+        new_question_id = f"{bank_name}_{new_id_num}"
+        
+        # 2. 准备插入数据
+        stem = question_data.get('stem', '').strip()
+        answer = question_data.get('answer', '').strip()
+        difficulty = question_data.get('difficulty', '未知')
+        qtype = question_data.get('qtype', '未知')
+        category = question_data.get('category', '未分类')
+        options = json.dumps(question_data.get('options', {}), ensure_ascii=False)
+        
+        # 3. 插入到数据库
+        c.execute('''
+            INSERT INTO questions (id, stem, answer, difficulty, qtype, category, options, bank_name)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (new_question_id, stem, answer, difficulty, qtype, category, options, bank_name))
+        
+        conn.commit()
+        
+        # 4. 同步到CSV文件
+        success = add_question_to_csv(bank_name, new_id_num, question_data)
+        
+        if success:
+            db_logger.info(f"Added new question {new_question_id} to database and CSV")
+            return True, new_question_id
+        else:
+            # CSV写入失败，回滚数据库操作
+            conn.rollback()
+            return False, "CSV文件写入失败"
+            
+    except Exception as e:
+        print(f"Error adding question to database: {e}")
+        db_logger.error(f"Error adding question: {e}")
+        conn.rollback()
+        return False, str(e)
+
+def add_question_to_csv(bank_name, question_num, question_data):
+    """
+    向CSV文件添加新题目
+    
+    Args:
+        bank_name (str): 题库名称（不带.csv后缀）
+        question_num (int): 题目编号
+        question_data (dict): 题目数据
+        
+    Returns:
+        bool: 是否成功添加
+    """
+    try:
+        # 构建CSV文件路径
+        csv_file = os.path.join('./questions-bank', f"{bank_name}.csv")
+        
+        # 如果CSV文件不存在，创建新文件
+        if not os.path.exists(csv_file):
+            print(f"CSV file not found, creating new: {csv_file}")
+            create_new_csv_file(csv_file)
+        
+        # 读取现有数据
+        with open(csv_file, 'r', encoding='utf-8-sig') as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+            fieldnames = reader.fieldnames
+        
+        # 准备新行数据
+        new_row = {
+            '题号': str(question_num),
+            '题干': question_data.get('stem', ''),
+            '答案': question_data.get('answer', ''),
+            '难度': question_data.get('difficulty', '未知'),
+            '题型': question_data.get('qtype', '未知'),
+            '类别': question_data.get('category', '未分类')
+        }
+        
+        # 添加选项
+        options = question_data.get('options', {})
+        for opt in ['A', 'B', 'C', 'D', 'E']:
+            if opt in options:
+                new_row[opt] = options[opt]
+            else:
+                new_row[opt] = ''
+        
+        # 确保所有字段都存在
+        for field in fieldnames:
+            if field not in new_row:
+                new_row[field] = ''
+        
+        # 添加新行
+        rows.append(new_row)
+        
+        # 写回CSV文件
+        with open(csv_file, 'w', encoding='utf-8-sig', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+        
+        db_logger.info(f"Added question {question_num} to CSV file {bank_name}.csv")
+        return True
+        
+    except Exception as e:
+        print(f"Error adding question to CSV: {e}")
+        db_logger.error(f"Error adding question to CSV: {e}")
+        return False
+
+def create_new_csv_file(csv_file_path):
+    """
+    创建新的CSV文件并写入表头
+    
+    Args:
+        csv_file_path (str): CSV文件路径
+    """
+    fieldnames = ['题号', '题干', '答案', '难度', '题型', '类别', 'A', 'B', 'C', 'D', 'E']
+    
+    with open(csv_file_path, 'w', encoding='utf-8-sig', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+    
+    print(f"Created new CSV file: {csv_file_path}")
+
+def get_enhanced_types(cursor, bank_name):
+    """
+    获取增强的题型列表，确保至少包含标准题型
+    
+    Args:
+        cursor: 数据库游标
+        bank_name (str): 题库名称
+        
+    Returns:
+        list: 题型列表（包含所有已有题型和标准题型）
+    """
+    # 查询数据库中已有的题型
+    cursor.execute('''
+        SELECT DISTINCT qtype 
+        FROM questions 
+        WHERE bank_name = ? AND qtype IS NOT NULL AND qtype != ''
+        ORDER BY qtype
+    ''', (bank_name,))
+    existing_types = [row['qtype'] for row in cursor.fetchall()]
+    
+    # 标准题型列表
+    standard_types = ['单选题', '多选题', '判断题', '填空题', '简答题']
+    
+    # 合并并去重，标准题型放在前面
+    all_types = []
+    
+    # 先添加标准题型（如果存在）
+    for stype in standard_types:
+        if stype not in all_types:
+            all_types.append(stype)
+    
+    # 再添加其他已有题型
+    for etype in existing_types:
+        if etype not in all_types:
+            all_types.append(etype)
+    
+    return all_types
+def get_enhanced_difficulties(cursor, bank_name):
+    """
+    获取增强的难度列表，确保至少包含标准难度
+    
+    Args:
+        cursor: 数据库游标
+        bank_name (str): 题库名称
+        
+    Returns:
+        list: 难度列表
+    """
+    cursor.execute('''
+        SELECT DISTINCT difficulty 
+        FROM questions 
+        WHERE bank_name = ? AND difficulty IS NOT NULL AND difficulty != ''
+        ORDER BY 
+            CASE difficulty
+                WHEN '简单' THEN 1
+                WHEN '中等' THEN 2
+                WHEN '困难' THEN 3
+                ELSE 4
+            END
+    ''', (bank_name,))
+    existing_difficulties = [row['difficulty'] for row in cursor.fetchall()]
+    
+    standard_difficulties = ['简单', '中等', '困难', '未知']
+    
+    all_difficulties = []
+    for sdif in standard_difficulties:
+        if sdif not in all_difficulties:
+            all_difficulties.append(sdif)
+    
+    for edif in existing_difficulties:
+        if edif not in all_difficulties:
+            all_difficulties.append(edif)
+    
+    return all_difficulties
+
 # ================= 数据库日志配置 =================
 def setup_db_logger():
     """设置数据库专用日志记录器"""
