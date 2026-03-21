@@ -50,24 +50,6 @@
             {{ wrong_count }}
         </div>
     </div>
-    
-    <div class="stat-card">
-        <div class="stat-icon" style="background-color: rgba(46, 196, 182, 0.1); color: var(--success-color);">
-            <i class="fas fa-fire"></i>
-        </div>
-        <div class="stat-label">学习热度</div>
-        <div class="stat-value">
-            {% if difficulty_stats|length > 0 %}
-                {% if recent_exams and recent_exams|length > 0 %}
-                    优秀
-                {% else %}
-                    良好
-                {% endif %}
-            {% else %}
-                待提升
-            {% endif %}
-        </div>
-    </div>
 </div>
 
 <!-- 按难度/分类统计 -->

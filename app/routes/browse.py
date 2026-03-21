@@ -393,7 +393,7 @@ def edit_question(question_id):
                          current_bank=current_bank)
 
 @browse_bp.route('/add', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def add_question():
     """新增题目"""
     user_id = get_user_id()
