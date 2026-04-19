@@ -3,7 +3,7 @@
  * 处理开始考试、考试历史滚动等交互
  */
 
-console.log('exams.js 加载成功');
+// console.log('exams.js 加载成功');
 
 class ExamsPage {
     constructor() {
@@ -11,7 +11,7 @@ class ExamsPage {
     }
     
     init() {
-        console.log('ExamsPage 初始化');
+        // console.log('ExamsPage 初始化');
         this.setupEventListeners();
         this.setupHistoryScrolling();
         this.updateScrollButtons();
@@ -109,7 +109,7 @@ class ExamsPage {
         const questionCount = form.querySelector('#questionCount').value;
         const submitBtn = form.querySelector('.btn-start-exam');
 
-        console.log(`开始考试，题目数量: ${questionCount}`);
+        // console.log(`开始考试，题目数量: ${questionCount}`);
 
         // 禁用按钮防止重复提交
         submitBtn.disabled = true;
@@ -175,7 +175,7 @@ class ExamsPage {
      */
     handleContinueExam(event) {
         // 继续考试直接跳转，无需额外处理
-        console.log('继续考试');
+        // console.log('继续考试');
     }
     
     /**
@@ -183,7 +183,7 @@ class ExamsPage {
      */
     handleViewExam(event, button) {
         // 查看详情直接跳转，无需额外处理
-        console.log('查看考试详情');
+        // console.log('查看考试详情');
     }
     
     /**
@@ -250,7 +250,7 @@ class ExamsPage {
         // 使用已有的消息系统
         const messageContainer = document.getElementById('flashMessages');
         if (!messageContainer) {
-            console.log(`${type}: ${message}`);
+            // console.log(`${type}: ${message}`);
             return;
         }
         
@@ -280,7 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 添加到全局对象以便调试
     window.examsPage = examsPage;
     
-    console.log('ExamsPage 初始化完成');
+    // console.log('ExamsPage 初始化完成');
 });
 
 // 监听 AJAX 切换后的事件

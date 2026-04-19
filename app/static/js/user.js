@@ -1,6 +1,6 @@
 // user.js - 用户中心页面交互功能 (重构版，类似banks.js)
 
-console.log('user.js 加载成功 - 重构版');
+// console.log('user.js 加载成功 - 重构版');
 
 class UserProfile {
     constructor() {
@@ -13,12 +13,12 @@ class UserProfile {
     }
     
     init() {
-        console.log('UserProfile 初始化');
+        // console.log('UserProfile 初始化');
         
         // 检查是否在用户页面中
         const userProfileContainer = document.querySelector('.user-profile-container');
         if (!userProfileContainer) {
-            console.log('不在用户页面，退出初始化');
+            // console.log('不在用户页面，退出初始化');
             return;
         }
         
@@ -27,7 +27,7 @@ class UserProfile {
             this.cleanup();
         }
         
-        console.log('初始化用户中心页面');
+        // console.log('初始化用户中心页面');
         
         // 初始化侧边栏导航
         this.initSidebarNavigation();
@@ -51,7 +51,7 @@ class UserProfile {
      * 清理用户中心页面状态
      */
     cleanup() {
-        console.log('清理用户中心页面状态');
+        // console.log('清理用户中心页面状态');
         
         // 移除hashchange事件监听器
         window.removeEventListener('hashchange', this.activateTabFromHash);
@@ -147,15 +147,15 @@ class UserProfile {
         const hash = window.location.hash.substring(1); // 去掉#前缀
         const validTabs = ['profile', 'replies', 'statistics', 'favorites', 'wrong'];
         
-        console.log('activateTabFromHash: 当前hash =', hash, '完整URL =', window.location.href);
+        // console.log('activateTabFromHash: 当前hash =', hash, '完整URL =', window.location.href);
         
         let tabId = 'profile'; // 默认标签页
         
         if (hash && validTabs.includes(hash)) {
             tabId = hash;
-            console.log('activateTabFromHash: 激活标签页', tabId);
+            // console.log('activateTabFromHash: 激活标签页', tabId);
         } else {
-            console.log('activateTabFromHash: 使用默认标签页', tabId);
+            // console.log('activateTabFromHash: 使用默认标签页', tabId);
         }
         
         // 激活标签页
@@ -165,7 +165,7 @@ class UserProfile {
         const correspondingLink = document.querySelector(`.nav-link[data-tab="${tabId}"]`);
         if (correspondingLink) {
             this.updateNavActiveState(correspondingLink);
-            console.log('activateTabFromHash: 更新导航链接激活状态', tabId);
+            // console.log('activateTabFromHash: 更新导航链接激活状态', tabId);
         } else {
             console.warn('activateTabFromHash: 未找到对应的导航链接', tabId);
         }
@@ -191,11 +191,11 @@ class UserProfile {
      * @param {Event} event - ajax:page:updated 事件
      */
     handleAjaxPageUpdated(event) {
-        console.log('UserProfile: 处理 ajax:page:updated 事件', event.detail);
+        // console.log('UserProfile: 处理 ajax:page:updated 事件', event.detail);
         
         const page = event.detail?.page;
         if (page === 'user') {
-            console.log('检测到用户页面 AJAX 更新，激活标签页');
+            // console.log('检测到用户页面 AJAX 更新，激活标签页');
             
             // 延迟执行，确保DOM完全更新
             setTimeout(() => {
@@ -271,7 +271,7 @@ class UserProfile {
      */
     initProfileTab() {
         // 个人资料标签页特定的初始化代码
-        console.log('个人资料标签页已激活');
+        // console.log('个人资料标签页已激活');
     }
     
     /**
@@ -279,7 +279,7 @@ class UserProfile {
      */
     initRepliesTab() {
         // 我的回复标签页特定的初始化代码
-        console.log('我的回复标签页已激活');
+        // console.log('我的回复标签页已激活');
     }
     
     /**
@@ -287,7 +287,7 @@ class UserProfile {
      */
     initStatisticsTab() {
         // 学习统计标签页特定的初始化代码
-        console.log('学习统计标签页已激活');
+        // console.log('学习统计标签页已激活');
     }
     
     /**
@@ -295,7 +295,7 @@ class UserProfile {
      */
     initFavoritesTab() {
         // 我的收藏标签页特定的初始化代码
-        console.log('我的收藏标签页已激活');
+        // console.log('我的收藏标签页已激活');
     }
     
     /**
@@ -303,7 +303,7 @@ class UserProfile {
      */
     initWrongTab() {
         // 我的错题标签页特定的初始化代码
-        console.log('我的错题标签页已激活');
+        // console.log('我的错题标签页已激活');
     }
     
     /**
@@ -316,10 +316,10 @@ class UserProfile {
 
 // 全局初始化
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM加载完成，初始化UserProfile');
+    // console.log('DOM加载完成，初始化UserProfile');
     try {
         window.userProfile = new UserProfile();
-        console.log('UserProfile 初始化成功');
+        // console.log('UserProfile 初始化成功');
     } catch (error) {
         console.error('UserProfile 初始化失败:', error);
     }
@@ -327,12 +327,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 确保在AJAX导航器之后执行
 if (document.readyState === 'loading') {
-    console.log('文档仍在加载中，等待DOMContentLoaded事件');
+    // console.log('文档仍在加载中，等待DOMContentLoaded事件');
 } else {
-    console.log('文档已准备就绪，立即初始化');
+    // console.log('文档已准备就绪，立即初始化');
     try {
         window.userProfile = new UserProfile();
-        console.log('UserProfile 立即初始化成功');
+        // console.log('UserProfile 立即初始化成功');
     } catch (error) {
         console.error('UserProfile 立即初始化失败:', error);
     }
@@ -342,22 +342,22 @@ if (document.readyState === 'loading') {
 
 // 导出全局访问
 window.UserProfile = UserProfile;
-console.log('user.js 加载完成 - 使用类模式');
+// console.log('user.js 加载完成 - 使用类模式');
 
 // 监听 AJAX 页面更新事件，确保用户页面标签页正确激活
 window.addEventListener('ajax:page:updated', function(event) {
-    console.log('ajax:page:updated 事件触发，detail:', event.detail);
+    // console.log('ajax:page:updated 事件触发，detail:', event.detail);
     
     const page = event.detail?.page;
-    console.log('页面标识:', page);
+    // console.log('页面标识:', page);
     
     // 如果是用户页面
     if (page === 'user') {
-        console.log('检测到用户页面更新，确保 UserProfile 正确初始化');
+        // console.log('检测到用户页面更新，确保 UserProfile 正确初始化');
         
         // 确保 UserProfile 实例存在
         if (!window.userProfile) {
-            console.log('UserProfile 实例不存在，创建新实例');
+            // console.log('UserProfile 实例不存在，创建新实例');
             try {
                 window.userProfile = new UserProfile();
             } catch (error) {
@@ -369,18 +369,18 @@ window.addEventListener('ajax:page:updated', function(event) {
         // 检查是否在用户页面容器中
         const userProfileContainer = document.querySelector('.user-profile-container');
         if (!userProfileContainer) {
-            console.log('用户页面容器未找到，可能不在用户页面');
+            // console.log('用户页面容器未找到，可能不在用户页面');
             return;
         }
         
         // 检查 UserProfile 是否已初始化
         if (!window.userProfile.initialized) {
-            console.log('UserProfile 未初始化，调用 init()');
+            // console.log('UserProfile 未初始化，调用 init()');
             window.userProfile.init();
         }
         // 如果已初始化，确保事件监听器已设置
         else {
-            console.log('UserProfile 已初始化');
+            // console.log('UserProfile 已初始化');
         }
     }
 });
