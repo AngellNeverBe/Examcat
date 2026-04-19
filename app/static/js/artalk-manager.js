@@ -36,7 +36,7 @@ const ArtalkManager = (function() {
             return;
         }
 
-        console.log('ArtalkManager: 初始化中...');
+        // console.log('ArtalkManager: 初始化中...');
         
         // 合并配置
         currentConfig = { ...defaultConfig, ...config };
@@ -54,11 +54,11 @@ const ArtalkManager = (function() {
         }
 
         isInitialized = true;
-        console.log('ArtalkManager: 初始化完成，配置:', currentConfig);
+        // console.log('ArtalkManager: 初始化完成，配置:', currentConfig);
         
         // 执行待处理的评论区显示任务
         if (pendingCommentsQueue.length > 0) {
-            console.log(`ArtalkManager: 执行 ${pendingCommentsQueue.length} 个待处理任务`);
+            // console.log(`ArtalkManager: 执行 ${pendingCommentsQueue.length} 个待处理任务`);
             pendingCommentsQueue.forEach(task => {
                 showComments(task.pageKey, task.pageTitle);
             });
@@ -88,7 +88,7 @@ const ArtalkManager = (function() {
 
             if (artalkInstance) {
                 // 更新现有实例配置
-                console.log('ArtalkManager: 更新现有Artalk实例配置', mergedConfig);
+                // console.log('ArtalkManager: 更新现有Artalk实例配置', mergedConfig);
                 try {
                     artalkInstance.update(mergedConfig);
                     artalkInstance.reload();
@@ -99,7 +99,7 @@ const ArtalkManager = (function() {
                 }
             } else {
                 // 创建新实例
-                console.log('ArtalkManager: 创建新Artalk实例', mergedConfig);
+                // console.log('ArtalkManager: 创建新Artalk实例', mergedConfig);
                 try {
                     artalkInstance = window.Artalk.init(mergedConfig);
 
@@ -131,7 +131,7 @@ const ArtalkManager = (function() {
     function destroyInstance() {
         if (artalkInstance) {
             try {
-                console.log('ArtalkManager: 销毁Artalk实例');
+                // console.log('ArtalkManager: 销毁Artalk实例');
                 artalkInstance.destroy();
                 artalkInstance = null;
                 window.artalk = null;
@@ -155,14 +155,14 @@ const ArtalkManager = (function() {
 
             const el = document.querySelector(config.el);
             if (!el) {
-                console.log('ArtalkManager: artalk实例的DOM元素不在文档中，实例无效');
+                // console.log('ArtalkManager: artalk实例的DOM元素不在文档中，实例无效');
                 return false;
             }
 
             // 检查元素是否已挂载artalk（是否有artalk相关类）
             const hasArtalkClass = el.classList.contains('artalk');
             if (!hasArtalkClass) {
-                console.log('ArtalkManager: artalk实例的DOM元素缺少artalk类，实例可能未正确初始化');
+                // console.log('ArtalkManager: artalk实例的DOM元素缺少artalk类，实例可能未正确初始化');
                 return false;
             }
 
@@ -181,7 +181,7 @@ const ArtalkManager = (function() {
     function showComments(pageKey, pageTitle) {
         // 如果尚未初始化，将任务加入队列
         if (!isInitialized) {
-            console.log(`ArtalkManager: 尚未初始化，将评论区显示任务加入队列 pageKey=${pageKey}`);
+            // console.log(`ArtalkManager: 尚未初始化，将评论区显示任务加入队列 pageKey=${pageKey}`);
             pendingCommentsQueue.push({ pageKey, pageTitle });
             return false;
         }
@@ -191,7 +191,7 @@ const ArtalkManager = (function() {
             return false;
         }
 
-        console.log(`ArtalkManager: 显示评论区 pageKey=${pageKey}, pageTitle=${pageTitle}`);
+        // console.log(`ArtalkManager: 显示评论区 pageKey=${pageKey}, pageTitle=${pageTitle}`);
 
         // 检查容器元素是否存在
         const container = document.querySelector(currentConfig.el);
@@ -216,13 +216,13 @@ const ArtalkManager = (function() {
         }
 
         if (isContainerVisible && hasValidInstance && isSamePageKey) {
-            console.log(`ArtalkManager: 评论区已显示且实例有效 pageKey=${pageKey}，跳过重复调用`);
+            // console.log(`ArtalkManager: 评论区已显示且实例有效 pageKey=${pageKey}，跳过重复调用`);
             return true;
         }
 
         // 如果实例存在但无效，销毁它以便重新创建
         if (artalkInstance && !hasValidInstance) {
-            console.log('ArtalkManager: artalk实例无效，销毁旧实例');
+            // console.log('ArtalkManager: artalk实例无效，销毁旧实例');
             destroyInstance();
         }
 
@@ -256,26 +256,26 @@ const ArtalkManager = (function() {
      * 隐藏评论区
      */
     function hideComments() {
-        console.log('ArtalkManager: hideComments被调用');
+        // console.log('ArtalkManager: hideComments被调用');
         
         // 检查是否在冷却期内（刚刚显示过评论区）
         const now = Date.now();
         if (now - lastShowTime < SHOW_COOLDOWN) {
-            console.log(`ArtalkManager: 在显示冷却期内（${now - lastShowTime}ms < ${SHOW_COOLDOWN}ms），跳过隐藏`);
+            // console.log(`ArtalkManager: 在显示冷却期内（${now - lastShowTime}ms < ${SHOW_COOLDOWN}ms），跳过隐藏`);
             return;
         }
         
         // 检查当前是否应该显示评论区（针对已答题目页面）
         const shouldShow = shouldShowComments();
         if (shouldShow) {
-            console.log('ArtalkManager: 当前应该显示评论区，跳过隐藏');
+            // console.log('ArtalkManager: 当前应该显示评论区，跳过隐藏');
             return;
         }
         
         const container = document.querySelector(currentConfig.el);
         if (container) {
             container.style.display = 'none';
-            console.log('ArtalkManager: 隐藏评论区');
+            // console.log('ArtalkManager: 隐藏评论区');
         }
     }
 
@@ -307,7 +307,7 @@ const ArtalkManager = (function() {
      * @param {Array} comments - 评论列表
      */
     function handleCommentsLoaded(comments) {
-        console.log(`ArtalkManager: 评论加载完成，共${comments.length}条评论`);
+        // console.log(`ArtalkManager: 评论加载完成，共${comments.length}条评论`);
         updateCommentCount();
     }
 
@@ -401,16 +401,16 @@ const ArtalkManager = (function() {
         const urlPath = window.location.pathname;
         const isAjaxQuestionPage = urlPath.includes('/ajax/question-');
 
-        console.log(`ArtalkManager: shouldShowComments检查:
-          hasResultMessage: ${hasResultMessage} (元素: ${resultMessageEl?.tagName || 'null'})
-          hasDisabledOptions: ${hasDisabledOptions} (数量: ${disabledOptions.length})
-          hasDisabledSubmitBtn: ${hasDisabledSubmitBtn}
-          hasCommentsContainer: ${hasCommentsContainer}
-          hasQuestionElements: ${hasQuestionElements}
-          isQuestionPage: ${isQuestionPage}
-          isContainerVisible: ${isContainerVisible}
-          isAjaxQuestionPage: ${isAjaxQuestionPage}
-          pathname: ${urlPath}`);
+        // // console.log(`ArtalkManager: shouldShowComments检查:
+        //   hasResultMessage: ${hasResultMessage} (元素: ${resultMessageEl?.tagName || 'null'})
+        //   hasDisabledOptions: ${hasDisabledOptions} (数量: ${disabledOptions.length})
+        //   hasDisabledSubmitBtn: ${hasDisabledSubmitBtn}
+        //   hasCommentsContainer: ${hasCommentsContainer}
+        //   hasQuestionElements: ${hasQuestionElements}
+        //   isQuestionPage: ${isQuestionPage}
+        //   isContainerVisible: ${isContainerVisible}
+        //   isAjaxQuestionPage: ${isAjaxQuestionPage}
+        //   pathname: ${urlPath}`);
 
         // 如果容器已经显示，或者有已答题的标识，就应该显示评论区
         return isContainerVisible || hasResultMessage || hasDisabledOptions || hasDisabledSubmitBtn;
@@ -422,18 +422,18 @@ const ArtalkManager = (function() {
     function autoShowCommentsIfNeeded() {
         // 防止重复处理
         if (isProcessingAutoShow) {
-            console.log('ArtalkManager: 正在处理自动显示，跳过');
+            // console.log('ArtalkManager: 正在处理自动显示，跳过');
             return;
         }
         
         const currentUrl = window.location.href;
         if (currentUrl === lastProcessedUrl) {
-            console.log('ArtalkManager: 当前URL已处理过，跳过', currentUrl);
+            // console.log('ArtalkManager: 当前URL已处理过，跳过', currentUrl);
             return;
         }
         
         isProcessingAutoShow = true;
-        console.log('ArtalkManager: 开始自动检查评论区显示，URL:', currentUrl);
+        // console.log('ArtalkManager: 开始自动检查评论区显示，URL:', currentUrl);
         
         try {
             // 检查是否在题目页面：存在评论区容器且有题目相关元素
@@ -450,7 +450,7 @@ const ArtalkManager = (function() {
                 if (shouldShowComments()) {
                     // 如果容器已显示且artalk实例有效，跳过重复处理
                     if (isContainerVisible && isInstanceValid()) {
-                        console.log('ArtalkManager: 评论区已显示且实例有效，跳过自动显示');
+                        // console.log('ArtalkManager: 评论区已显示且实例有效，跳过自动显示');
                         lastProcessedUrl = currentUrl;
                         return;
                     }
@@ -485,7 +485,7 @@ const ArtalkManager = (function() {
                     }
 
                     if (pageKey) {
-                        console.log('ArtalkManager: 自动显示评论区 pageKey=', pageKey);
+                        // console.log('ArtalkManager: 自动显示评论区 pageKey=', pageKey);
                         showComments(pageKey, document.title);
                         lastProcessedUrl = currentUrl;
                     } else {
@@ -495,13 +495,13 @@ const ArtalkManager = (function() {
                 } else {
                     // 在题目页面但不应显示评论区，不执行任何操作
                     // 评论区容器默认通过CSS隐藏（display: none）
-                    console.log('ArtalkManager: 在题目页面但未答题，保持评论区隐藏状态');
+                    // console.log('ArtalkManager: 在题目页面但未答题，保持评论区隐藏状态');
                     lastProcessedUrl = currentUrl;
                 }
             } else {
                 // 不在题目页面，不执行任何操作
                 // 其他页面可能没有评论区容器，或者有自己的评论区逻辑
-                console.log('ArtalkManager: 不在题目页面，不操作评论区');
+                // console.log('ArtalkManager: 不在题目页面，不操作评论区');
                 lastProcessedUrl = currentUrl;
             }
         } finally {
@@ -555,7 +555,7 @@ const ArtalkManager = (function() {
      * 处理页面更新事件
      */
     function handlePageUpdated() {
-        console.log('ArtalkManager: 检测到页面更新');
+        // console.log('ArtalkManager: 检测到页面更新');
 
         // 检查新页面中是否有评论区容器
         const newPageKey = getPageKeyFromDOM();
@@ -563,7 +563,7 @@ const ArtalkManager = (function() {
 
         // 如果没有评论区容器，销毁实例
         if (!hasCommentsContainer) {
-            console.log('ArtalkManager: 新页面没有评论区容器，销毁实例');
+            // console.log('ArtalkManager: 新页面没有评论区容器，销毁实例');
             destroyInstance();
         } else if (artalkInstance) {
             // 如果有实例，检查是否为相同页面
@@ -573,7 +573,7 @@ const ArtalkManager = (function() {
 
             // 如果pageKey不同，销毁旧实例（新页面需要新实例）
             if (instancePageKey && newPageKey !== instancePageKey) {
-                console.log(`ArtalkManager: 页面切换 (${instancePageKey} -> ${newPageKey})，销毁旧实例`);
+                // console.log(`ArtalkManager: 页面切换 (${instancePageKey} -> ${newPageKey})，销毁旧实例`);
                 destroyInstance();
             }
         }
@@ -595,7 +595,7 @@ const ArtalkManager = (function() {
 
     // 监听答题完成事件（从question.js触发）
     window.addEventListener('question:answer:submitted', function(event) {
-        console.log('ArtalkManager: 检测到答题完成事件', event.detail);
+        // console.log('ArtalkManager: 检测到答题完成事件', event.detail);
         if (event.detail && event.detail.questionId) {
             showComments(event.detail.questionId, event.detail.questionTitle);
         }
