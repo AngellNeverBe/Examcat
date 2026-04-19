@@ -14,8 +14,11 @@
 [data-cursor="pointer"],
 .move-card .tracker,
 .user-trigger i,
-.user-trigger span {
-    cursor: url('/static/cursors/link.cur')8 0, pointer;
+.user-trigger span,
+#waifu-toggle,
+#waifu-toggle svg,
+#waifu-toggle path {
+    cursor: url('/static/cursors/link.cur')8 0, pointer !important;
 }
 
 /* 链接 */
