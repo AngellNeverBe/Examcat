@@ -7,6 +7,7 @@ from ..utils.cookie import set_cookies_from_dict
 from ..utils.auth import get_user_id
 from ..utils.database import get_db
 from ..utils.banks import get_current_bank_id
+from ..utils.exams import get_last_unfinished_exam, get_recent_exams, get_exam_data
 
 ajax_bp = Blueprint('ajax', __name__, template_folder='../templates/_partial')
 
@@ -105,9 +106,6 @@ def ajax_page(page_name):
         if not user_id:
             return jsonify({'success': False, 'error': '请先登录'}), 401
         
-        # 导入考试相关函数
-        from ..routes.exams import get_last_unfinished_exam, get_recent_exams
-        
         # 获取考试数据
         last_unfinished = get_last_unfinished_exam(user_id)
         recent_exams = get_recent_exams(user_id, limit=8)
@@ -160,8 +158,6 @@ def ajax_page(page_name):
             if not user_id:
                 return jsonify({'success': False, 'error': '请先登录'}), 401
             
-            # 获取考试数据
-            from ..routes.exams import get_exam_data
             data = get_exam_data(user_id, exam_id)
             
             if not data:
