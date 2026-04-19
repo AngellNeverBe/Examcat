@@ -26,6 +26,8 @@ class AjaxNavigator {
             // 全局资源（来自base.html）不应该被禁用
             globalResources: {
                 styles: new Set([
+                    '/static/css/sakura.css',
+                    '/static/css/base_auth.css',
                     '/static/css/style.css',
                     '/static/css/base.css',
                     '/static/css/cursors.css',
@@ -33,6 +35,8 @@ class AjaxNavigator {
                     '/ajax/libs/artalk/2.9.1/Artalk.css'
                 ]),
                 scripts: new Set([
+                    '/static/js/sakura.js',
+                    '/static/js/base_auth.js',
                     '/static/js/base.js',
                     '/static/js/ajax_navigator.js',
                     '/static/js/ajax_nav_activator.js',
