@@ -2,14 +2,11 @@
 examcat - 数据库辅助函数
 """
 import sqlite3
-import json
 import os
-import glob
-import csv
 import logging
 import time
-from functools import wraps
-from flask import session, request, redirect, url_for, flash, g
+from typing import Dict, Union
+from flask import g
 
 def get_db():
     """
@@ -48,561 +45,401 @@ def init_app(app):
     """
     app.teardown_appcontext(close_db)
 
-def migrate_database():
-    """
-    Migrate the database to add new columns if they don't exist.
-    This handles database schema updates without losing data.
-    """
-    conn = get_db()
-    c = conn.cursor()
-    
-    # Check if current_bank column exists in users table
-    try:
-        c.execute('SELECT current_bank FROM users LIMIT 1')
-    except sqlite3.OperationalError:
-        # Column doesn't exist, add it
-        print("Adding current_bank column to users table...")
-        c.execute('ALTER TABLE users ADD COLUMN current_bank TEXT DEFAULT "questions"')
-    
-    # Check if bank_name column exists in questions table
-    try:
-        c.execute('SELECT bank_name FROM questions LIMIT 1')
-    except sqlite3.OperationalError:
-        # Column doesn't exist, add it
-        print("Adding bank_name column to questions table...")
-        c.execute('ALTER TABLE questions ADD COLUMN bank_name TEXT DEFAULT "questions"')
-        
-        # Update existing questions to have the default bank name
-        c.execute('UPDATE questions SET bank_name = "questions" WHERE bank_name IS NULL')
-    
-    # Check if bank_name column exists in history table
-    try:
-        c.execute('SELECT bank_name FROM history LIMIT 1')
-    except sqlite3.OperationalError:
-        # Column doesn't exist, add it
-        print("Adding bank_name column to history table...")
-        c.execute('ALTER TABLE history ADD COLUMN bank_name TEXT')
-    
-    # ==================== 迁移 exam_sessions 表 ====================
-    # 检查 answers 列是否存在
-    try:
-        c.execute('SELECT answers FROM exam_sessions LIMIT 1')
-        answers_exists = True
-    except sqlite3.OperationalError:
-        answers_exists = False
-
-    # 检查 restart_time 列是否存在
-    try:
-        c.execute('SELECT restart_time FROM exam_sessions LIMIT 1')
-        restart_time_exists = True
-    except sqlite3.OperationalError:
-        restart_time_exists = False
-    
-    # 检查 mode 列是否存在
-    try:
-        c.execute('SELECT mode FROM exam_sessions LIMIT 1')
-        mode_exists = True
-    except sqlite3.OperationalError:
-        mode_exists = False
-    
-    # 1. 添加 answers 列（如果不存在）
-    if not answers_exists:
-        print("Adding answers column to exam_sessions table...")
-        c.execute('ALTER TABLE exam_sessions ADD COLUMN answers TEXT DEFAULT "[]"')
-    
-    # 2. 添加 restart_time 列（如果不存在）
-    if not restart_time_exists:
-        print("Adding restart_time column to exam_sessions table...")
-        c.execute('ALTER TABLE exam_sessions ADD COLUMN restart_time DATETIME')
-        # 将现有记录的 restart_time 设置为 start_time
-        c.execute('UPDATE exam_sessions SET restart_time = start_time WHERE restart_time IS NULL')
-    
-    # 3. 删除 mode 列（如果存在）
-    if mode_exists:
-        print("Removing mode column from exam_sessions table...")
-        
-        # 获取当前最大id值，用于后续恢复自增序列
-        c.execute('SELECT MAX(id) as max_id FROM exam_sessions')
-        max_id_row = c.fetchone()
-        max_id = max_id_row['max_id'] if max_id_row and max_id_row['max_id'] is not None else 0
-        
-        # 创建临时表（不包含mode列，但包含answers列）
-        c.execute('''
-            CREATE TABLE exam_sessions_new (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                question_ids TEXT NOT NULL,
-                start_time DATETIME NOT NULL,
-                duration INTEGER NOT NULL,
-                answers TEXT DEFAULT "[]",
-                completed BOOLEAN DEFAULT 0,
-                score REAL,
-                FOREIGN KEY (user_id) REFERENCES users(id)
-            )
-        ''')
-        
-        # 复制数据到新表（排除mode列）
-        c.execute('''
-            INSERT INTO exam_sessions_new 
-            (id, user_id, question_ids, start_time, duration, answers, completed, score)
-            SELECT 
-                id, 
-                user_id, 
-                question_ids, 
-                start_time, 
-                duration, 
-                COALESCE(answers, '[]'), 
-                completed, 
-                score
-            FROM exam_sessions
-        ''')
-        
-        # 删除旧表
-        c.execute('DROP TABLE exam_sessions')
-        
-        # 重命名新表
-        c.execute('ALTER TABLE exam_sessions_new RENAME TO exam_sessions')
-        
-        # 恢复自增序列
-        if max_id > 0:
-            c.execute('UPDATE sqlite_sequence SET seq = ? WHERE name = "exam_sessions"', (max_id,))
-            if c.rowcount == 0:
-                c.execute('INSERT INTO sqlite_sequence (name, seq) VALUES ("exam_sessions", ?)', (max_id,))
-        
-        print("Exam_sessions table migrated successfully.")
-    # ==================== 迁移完成 ====================
-    
-    conn.commit()
-    
-    # Migrate existing history records to have bank_name
-    migrate_history_data()
-
-def migrate_history_data():
-    """
-    Migrate existing history records to populate the bank_name field.
-    This should be called after adding the bank_name column to history table.
-    """
-    conn = get_db()
-    c = conn.cursor()
-    
-    try:
-        # Update existing history records with bank_name from questions table
-        c.execute('''
-            UPDATE history 
-            SET bank_name = (
-                SELECT bank_name FROM questions 
-                WHERE questions.id = history.question_id
-                LIMIT 1
-            )
-            WHERE bank_name IS NULL
-        ''')
-        
-        updated_count = c.rowcount
-        if updated_count > 0:
-            print(f"Migrated {updated_count} history records with bank_name")
-        
-        conn.commit()
-    except Exception as e:
-        print(f"Error migrating history data: {e}")
-        conn.rollback()
-
 def init_db():
     """
-    Initialize the database by creating necessary tables if they don't exist.
+    初始化数据库
     """
     conn = get_db()
     c = conn.cursor()
     
-    # Users table
-    c.execute('''CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL,
-        current_seq_qid TEXT,
-        current_bank TEXT DEFAULT 'questions',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )''')
+    # 1. users 表
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            email TEXT,
+            password_hash TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
     
-    # History table for tracking user answers - UPDATED with bank_name
-    c.execute('''CREATE TABLE IF NOT EXISTS history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        question_id TEXT NOT NULL,
-        user_answer TEXT NOT NULL,
-        correct INTEGER NOT NULL,
-        bank_name TEXT,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id)
-    )''')
+    # 2. banks 表
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS banks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            bankname TEXT NOT NULL,
+            type TEXT,
+            category TEXT,
+            total_count INTEGER NOT NULL DEFAULT 0,
+            category_count TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(bankname)
+        )
+    ''')
     
-    # Questions table for storing question data
-    c.execute('''CREATE TABLE IF NOT EXISTS questions (
-        id TEXT PRIMARY KEY,
-        stem TEXT NOT NULL,
-        answer TEXT NOT NULL,
-        difficulty TEXT,
-        qtype TEXT,
-        category TEXT,
-        options TEXT,
-        bank_name TEXT DEFAULT 'questions',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )''')
+    # 3. questions 表
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS questions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            "order" INTEGER NOT NULL DEFAULT 0,
+            bank_id INTEGER NOT NULL,
+            stem TEXT NOT NULL,
+            answer TEXT NOT NULL,
+            type TEXT,
+            type2 TEXT,
+            category TEXT,
+            options TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (bank_id) REFERENCES banks(id)
+        )
+    ''')
+    # 创建索引：加速查询“某题库的题目顺序”
+    c.execute('''
+        CREATE INDEX IF NOT EXISTS 
+            idx_questions_bank_order 
+            ON questions (bank_id, "order")
+    ''')
     
-    # Favorites table for user bookmarks
-    c.execute('''CREATE TABLE IF NOT EXISTS favorites (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        question_id TEXT NOT NULL,
-        tag TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(user_id, question_id),
-        FOREIGN KEY (user_id) REFERENCES users(id),
-        FOREIGN KEY (question_id) REFERENCES questions(id)
-    )''')
+    # 4. history 表（新结构 - 聚合统计）
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            question_id INTEGER NOT NULL,
+            bank_id INTEGER NOT NULL,
+            complete BOOLEAN DEFAULT 0,
+            last_answer TEXT,
+            correct BOOLEAN DEFAULT 0,
+            correct_count INTEGER NOT NULL DEFAULT 0,
+            wrong_count INTEGER NOT NULL DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            FOREIGN KEY (question_id) REFERENCES questions(id),
+            FOREIGN KEY (bank_id) REFERENCES banks(id),
+            UNIQUE(user_id, question_id)
+        )
+    ''')
+    # 创建索引：加速查询“某用户在某题库中已完成的题目”
+    c.execute('''
+        CREATE INDEX IF NOT EXISTS 
+            idx_history_user_bank_complete
+            ON history (user_id, bank_id, complete)
+    ''')
     
-    # Exam sessions table for exams
-    c.execute('''CREATE TABLE IF NOT EXISTS exam_sessions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        question_ids TEXT NOT NULL,
-        start_time DATETIME NOT NULL,
-        restart_time DATETIME NOT NULL,
-        duration INTEGER NOT NULL,
-        answers TEXT DEFAULT '[]',   -- JSON list of answers
-        completed BOOLEAN DEFAULT 0,
-        score REAL,
-        FOREIGN KEY (user_id) REFERENCES users(id)
-    )''')
+    # 5. favorites 表
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS favorites (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            question_id INTEGER NOT NULL,
+            bank_id INTEGER NOT NULL,
+            tag TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            FOREIGN KEY (question_id) REFERENCES questions(id),
+            FOREIGN KEY (bank_id) REFERENCES banks(id),
+            UNIQUE(user_id, question_id)
+        )
+    ''')
+    
+    # 6. exams 表
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS exams (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            question_ids TEXT NOT NULL,
+            bank_id INTEGER NOT NULL,
+            duration INTEGER NOT NULL,
+            answers TEXT,
+            complete BOOLEAN DEFAULT 0,
+            score REAL,
+            start_at DATETIME NOT NULL,
+            restart_at DATETIME,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            FOREIGN KEY (bank_id) REFERENCES banks(id)
+        )
+    ''')
+    # 添加索引：加速查询“用户最后一次未完成的考试”
+    c.execute('''
+        CREATE INDEX IF NOT EXISTS 
+            idx_exam_user_complete_restart 
+            ON exams (user_id, complete, restart_at)
+    ''')
+
+    # 7. question_stats 表
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS question_stats (
+            id INTEGER PRIMARY KEY,
+            complete_count INTEGER NOT NULL DEFAULT 0,
+            correct_count INTEGER NOT NULL DEFAULT 0,
+            FOREIGN KEY (id) REFERENCES questions(id)
+        )
+    ''')
     
     conn.commit()
-    
-    # Run database migration to add new columns if needed
-    migrate_database()
 
-def add_history_record(user_id, question_id, user_answer, correct, bank_name):
+# ========== history表 ===========
+def add_history_record(user_id: int, question_id: int, user_answer: str, correct: int, bank_id: int) -> None:
     """
-    添加答题历史记录，包含题库信息。
+    添加答题历史记录
     
     Args:
         user_id (int): 用户ID
-        question_id (str): 题目ID
+        question_id (int): 题目ID
         user_answer (str): 用户答案
         correct (int): 是否正确 (0/1)
-        bank_name (str): 题库名称（不带.csv后缀）
+        bank_id (int): 题库ID
     """
     conn = get_db()
     c = conn.cursor()
     
     try:
-        c.execute(
-            'INSERT INTO history (user_id, question_id, user_answer, correct, bank_name) VALUES (?,?,?,?,?)',
-            (user_id, question_id, user_answer, correct, bank_name)
-        )
+        # 检查记录是否存在
+        c.execute('''
+            SELECT id, correct_count, wrong_count 
+            FROM history 
+            WHERE user_id = ? AND question_id = ?
+        ''', (user_id, question_id))
+        
+        existing_record = c.fetchone()
+        
+        if existing_record:
+            # 更新现有记录
+            record_id = existing_record['id']
+            current_correct_count = existing_record['correct_count']
+            current_wrong_count = existing_record['wrong_count']
+            
+            # 计算增量
+            delta_correct = 1 if correct else 0
+            delta_wrong = 0 if correct else 1
+            
+            # 更新统计计数
+            new_correct_count = current_correct_count + delta_correct
+            new_wrong_count = current_wrong_count + delta_wrong
+            
+            c.execute('''
+                UPDATE history 
+                SET last_answer = ?, 
+                    correct = ?,
+                    correct_count = ?,
+                    wrong_count = ?,
+                    updated_at = CURRENT_TIMESTAMP,
+                    complete = 1
+                WHERE id = ?
+            ''', (user_answer, bool(correct), new_correct_count, new_wrong_count, record_id))
+            
+            # 增量更新题目统计
+            # delta_complete = 1（每次答题增加一次完成）
+            update_question_stats(question_id, delta_complete=1, delta_correct=delta_correct)
+            
+            db_logger.info(f"[{os.getpid()}] update_history_record: 用户{user_id}, 题目{question_id}, 答案{user_answer}, 正确{correct}, 题库ID{bank_id}")
+        else:
+            # 插入新记录
+            correct_count = 1 if correct else 0
+            wrong_count = 0 if correct else 1
+            
+            c.execute('''
+                INSERT INTO history (
+                    user_id, question_id, bank_id, complete,
+                    last_answer, correct, correct_count, wrong_count,
+                    created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ''', (
+                user_id, question_id, bank_id, 1,
+                user_answer, bool(correct), correct_count, wrong_count
+            ))
+            
+            # 增量更新题目统计
+            # 第一次答题：delta_complete=1, delta_correct=1或0
+            update_question_stats(question_id, delta_complete=1, delta_correct=correct_count)
+            
+            db_logger.info(f"[{os.getpid()}] add_history_record: 用户{user_id}, 题目{question_id}, 答案{user_answer}, 正确{correct}, 题库ID{bank_id}")
+        
         conn.commit()
-        db_logger.info(f"[{os.getpid()}] add_history_record: 用户{user_id}, 题目{question_id}, 答案{user_answer}, 正确{correct}, 题库{bank_name}")
+        
     except Exception as e:
-        print(f"Error adding history record: {e}")
+        print(f"Error adding/updating history record: {e}")
         db_logger.error(f"[{os.getpid()}] add_history_record: 用户{user_id}, 题目{question_id}, 错误: {str(e)}")
         conn.rollback()
         raise
-        
 
-def get_available_banks():
+def reset_history_record(user_id: int, bank_id: int) -> None:
     """
-    Get all available question banks (CSV files) from the questions-bank directory.
-    
-    Returns:
-        list: List of CSV filenames in the questions-bank directory（不带.csv后缀）
-    """
-    banks_dir = './questions-bank'
-    if not os.path.exists(banks_dir):
-        os.makedirs(banks_dir, exist_ok=True)
-    
-    # Get all CSV files in the directory
-    csv_files = glob.glob(os.path.join(banks_dir, '*.csv'))
-    
-    # Extract just the filenames and remove .csv suffix
-    banks = [os.path.splitext(os.path.basename(f))[0] for f in csv_files]
-    
-    # If no CSV files found, create a sample one
-    if not banks:
-        default_bank = 'sample_questions'
-        default_path = os.path.join(banks_dir, default_bank + '.csv')
-        # Create a sample CSV file
-        with open(default_path, 'w', encoding='utf-8-sig', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(['题号', '题干', '答案', '难度', '题型', '类别', 'A', 'B', 'C', 'D', 'E'])
-            writer.writerow(['1', '这是一个示例题目', 'A', '简单', '单选题', '示例', '正确选项', '错误选项', '错误选项', '错误选项', ''])
-        banks.append(default_bank)
-    
-    return sorted(banks)
-
-def get_first_bank():
-    """
-    Get the first question bank from questions-bank folder.
-    
-    Returns:
-        str: The first question bank filename（不带.csv后缀）, or None if none exist
-    """
-    banks = get_available_banks()
-    return banks[0] if banks else None
-
-def get_current_bank(user_id):
-    """
-    Get the current question bank for a user.
-    
-    Args:
-        user_id (int): The user ID
-        
-    Returns:
-        str: The current question bank filename（不带.csv后缀）
-    """
-    conn = get_db()
-    c = conn.cursor()
-    c.execute('SELECT current_bank FROM users WHERE id = ?', (user_id,))
-    row = c.fetchone()
-    
-    
-    if row and row['current_bank']:
-        # Check if the bank exists in questions-bank folder
-        bank_name = row['current_bank']
-        banks = get_available_banks()
-        if bank_name in banks:
-            return bank_name
-        
-        # If bank doesn't exist, get first available bank
-        first_bank = get_first_bank()
-        if first_bank:
-            # Update user's current bank
-            set_current_bank(user_id, first_bank)
-            return first_bank
-    
-    # Get first bank or default
-    first_bank = get_first_bank()
-    return first_bank if first_bank else 'questions'
-
-def set_current_bank(user_id, bank_name):
-    """
-    设置用户的当前题库，并更新当前题目ID。
+    重置用户在指定题库的答题记录，只将complete设为0
     
     Args:
         user_id (int): 用户ID
-        bank_name (str): 题库名称（可以带或不带.csv后缀）
-    """
-    # 确保bank_name不带.csv后缀
-    if bank_name.endswith('.csv'):
-        bank_name = bank_name[:-4]  # 去掉.csv后缀
-    
-    conn = get_db()
-    c = conn.cursor()
-    
-    # 更新当前题库
-    c.execute('UPDATE users SET current_bank = ? WHERE id = ?', (bank_name, user_id))
-    # 为新题库计算新的当前题目ID
-    next_qid = restore_qid(bank_name)
-    if next_qid:
-        c.execute('UPDATE users SET current_seq_qid = ? WHERE id = ?', (next_qid, user_id))
-        conn.commit()
-    
-
-def load_questions_to_db(conn, bank_name):
-    """
-    Load questions from a CSV file into the database.
-    
-    Args:
-        conn (sqlite3.Connection): The database connection
-        bank_name (str): The question bank filename（可以带或不带.csv后缀）
-    """
-    try:
-        # 确保bank_name有.csv后缀来查找文件
-        if not bank_name.endswith('.csv'):
-            file_name = bank_name + '.csv'
-        else:
-            file_name = bank_name
-            bank_name = bank_name[:-4]  # 去掉.csv后缀存储
-        
-        bank_path = os.path.join('./questions-bank', file_name)
-        
-        # Check if file exists
-        if not os.path.exists(bank_path):
-            print(f"Warning: {bank_path} file not found. No questions loaded.")
-            return
-        
-        with open(bank_path, 'r', encoding='utf-8-sig') as f:
-            reader = csv.DictReader(f)
-            c = conn.cursor()
-            
-            # Clear existing questions from this bank
-            c.execute('DELETE FROM questions WHERE bank_name = ?', (bank_name,))
-            
-            for row in reader:
-                options = {}
-                for opt in ['A', 'B', 'C', 'D', 'E']:
-                    if row.get(opt) and row[opt].strip():
-                        options[opt] = row[opt]
-                
-                # 修复：为题目ID添加题库前缀，确保唯一性
-                original_id = row.get('题号', '0')
-                question_id = f"{bank_name}_{original_id}"  # 添加题库名前缀（不带.csv后缀）
-                                
-                c.execute(
-                    "INSERT OR REPLACE INTO questions (id, stem, answer, difficulty, qtype, category, options, bank_name) VALUES (?,?,?,?,?,?,?,?)",
-                    (
-                        question_id,  # 使用带前缀的ID
-                        row.get("题干", ""),
-                        row.get("答案", ""),
-                        row.get("难度", "未知"),
-                        row.get("题型", "未知"),
-                        row.get("类别", "未分类"),
-                        json.dumps(options, ensure_ascii=False),
-                        bank_name  # 存储不带.csv后缀的题库名
-                    ),
-                )
-            conn.commit()
-            print(f"Loaded {c.rowcount} questions from {bank_name}")
-    except Exception as e:
-        print(f"Error loading questions from {bank_name}: {e}")
-        conn.rollback()
-
-def load_all_banks():
-    """
-    Load questions from all available banks into the database.
-    """
-    conn = get_db()
-    banks = get_available_banks()  # 获取不带后缀的题库名
-    
-    for bank in banks:
-        load_questions_to_db(conn, bank)
-    
-    
-
-def get_questions_by_bank(conn, bank_name):
-    """
-    Get all questions from a specific bank.
-    
-    Args:
-        conn (sqlite3.Connection): The database connection
-        bank_name (str): The question bank filename（不带.csv后缀）
+        bank_id (int): 题库ID
         
     Returns:
-        list: List of questions from the specified bank
-    """
-    c = conn.cursor()
-    c.execute('SELECT * FROM questions WHERE bank_name = ?', (bank_name,))
-    return c.fetchall()
-
-def get_current_question_id(user_id):
-    """
-    获取用户当前题目ID，确保它属于当前题库。
-    如果不属于，则重新计算并更新。
+        int: 重置的记录数
     """
     conn = get_db()
     c = conn.cursor()
     
-    # 获取当前题库
-    c.execute('SELECT current_bank, current_seq_qid FROM users WHERE id = ?', (user_id,))
-    row = c.fetchone()
-    if not row:
-        return None
-    
-    bank_name = row['current_bank']
-    current_qid = row['current_seq_qid']
-
-    # 如果current_qid为None，计算下一个题目
-    if current_qid is None:
-        next_qid = restore_qid(bank_name)
-        if next_qid:
-            c.execute('UPDATE users SET current_seq_qid = ? WHERE id = ?', (next_qid, user_id))
-            conn.commit()        
-        return next_qid
-    
-    # 检查current_qid是否属于当前题库
-    c.execute('SELECT bank_name FROM questions WHERE id = ?', (current_qid,))
-    q_row = c.fetchone()
-    if q_row and q_row['bank_name'] == bank_name:
-        # 当前题目ID有效        
-        return current_qid
-    else:
-        # 当前题目ID不属于当前题库，重新计算
-        next_qid = restore_qid(bank_name)
-        if next_qid:
-            c.execute('UPDATE users SET current_seq_qid = ? WHERE id = ?', (next_qid, user_id))
-            conn.commit()        
-        return next_qid
-    
-def get_next_question_id(qid, bank_name):
-    """获取用户在题库中下一个应该做的题号"""
-    next_qid = None
     try:
-        # Extract number from current question ID
-        current_number = extract_qid_number(qid)
-        if current_number:
-            # Convert to integer, add 1, and create new question ID
-            next_number = current_number + 1
-            next_qid = restore_qid(bank_name, next_number)
-            return next_qid
+        c.execute('''
+            UPDATE history 
+            SET complete = 0,
+                last_answer = NULL,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = ? AND bank_id = ? AND complete = 1
+        ''', (user_id, bank_id))
+        
+        updated_count = c.rowcount
+        conn.commit()        
+        db_logger.info(f"重置用户 {user_id} 在题库 {bank_id} 的答题记录: {updated_count} 条记录已重置")
 
-    except (ValueError, TypeError) as e:
-        # Log error but continue execution
-        db_logger.warning(f"Error calculating next_qid for {qid}: {e}")
-        next_qid = None
-        return next_qid
+        return updated_count
+        
+    except Exception as e:
+        db_logger.error(f"重置答题记录失败，用户 {user_id}，题库 {bank_id}: {e}")
+        conn.rollback()
+        raise
 
-def get_question_count(conn, bank_name):
-    """获取题库总题数"""
+# ========== question_stats表 ===========
+def update_question_stats(question_id: int, delta_complete: int = 0, delta_correct: int = 0) -> None:
+    """
+    增量更新题目统计信息
+    
+    Args:
+        question_id (int): 题目ID
+        delta_complete (int): 完成次数增量（默认0）
+        delta_correct (int): 正确次数增量（默认0）
+    """
+    conn = get_db()
     c = conn.cursor()
-    c.execute('SELECT COUNT(*) as total FROM questions WHERE bank_name = ?', (bank_name,))
-    result = c.fetchone()
-    return result['total'] if result else 0
+    
+    try:
+        # 1. 检查记录是否存在
+        c.execute('SELECT id FROM question_stats WHERE id = ?', (question_id,))
+        existing_record = c.fetchone()
+        
+        if existing_record:
+            # 2. 记录存在：执行增量更新
+            c.execute('''
+                UPDATE question_stats 
+                SET complete_count = complete_count + ?,
+                    correct_count = correct_count + ?
+                WHERE id = ?
+            ''', (delta_complete, delta_correct, question_id))
+            
+            # # 获取更新后的值用于日志
+            # c.execute('SELECT complete_count, correct_count FROM question_stats WHERE id = ?', (question_id,))
+            # updated_row = c.fetchone()
+            
+            # if updated_row:
+            #     logger.debug(f"增量更新题目 {question_id}: complete={updated_row['complete_count']}, correct={updated_row['correct_count']}")
+            # else:
+            #     logger.warning(f"题目 {question_id} 更新后查询失败")
+            
+        else:
+            # 3. 记录不存在：从history表聚合统计创建新记录
+            c.execute('''
+                SELECT 
+                    SUM(correct_count + wrong_count) as complete_count,
+                    SUM(correct_count) as correct_count
+                FROM history
+                WHERE question_id = ?
+            ''', (question_id,))
+            
+            stats = c.fetchone()
+            
+            if stats:
+                base_complete = stats['complete_count'] or 0
+                base_correct = stats['correct_count'] or 0
+                
+                # 加上增量值
+                total_complete = base_complete + delta_complete
+                total_correct = base_correct + delta_correct
+                
+                c.execute('''
+                    INSERT INTO question_stats (id, complete_count, correct_count)
+                    VALUES (?, ?, ?)
+                ''', (question_id, total_complete, total_correct))
+                
+                # logger.debug(f"创建题目 {question_id} 统计: complete={total_complete}, correct={total_correct}")
+            else:
+                # 如果history表中也没有记录，使用增量值创建新记录
+                c.execute('''
+                    INSERT INTO question_stats (id, complete_count, correct_count)
+                    VALUES (?, ?, ?)
+                ''', (question_id, delta_complete, delta_correct))
+                
+                # logger.debug(f"创建题目 {question_id} 统计（无历史记录）: complete={delta_complete}, correct={delta_correct}")
+        
+        conn.commit()
+            
+    except Exception as e:
+        db_logger.error(f"更新题目统计失败，题目ID: {question_id}, 错误: {e}")
+        conn.rollback()
+        raise
 
-def get_question_stats(conn, question_id):
+def fetch_question_stats(question_id: int) -> Dict[str, Union[int, float]]:
     """
     获取题目的答题统计信息
     
     Args:
-        question_id (str): 题目ID
+        question_id (int): 题目ID
         
     Returns:
         dict: 包含统计信息的字典，格式为：
             {
-                'total_answered': 总答题次数,
-                'total_correct': 正确答题次数,
-                'accuracy': 正确率(0-100)
+                'total_answered': int,   # 总答题次数
+                'total_correct': int,    # 正确答题次数
+                'accuracy': float        # 正确率(0-100)
             }
+    
+    Example:
+        >>> stats = fetch_question_stats(123)
+        >>> print(f"正确率 {stats['accuracy']}%")
+        正确率 75.5%
     """
+    conn = get_db()
     c = conn.cursor()
     
     try:
-        # 统计该题目的总答题次数和正确次数
+        # 从question_stats表获取统计信息
         c.execute('''
-            SELECT 
-                COUNT(*) as total_answered,
-                SUM(correct) as total_correct
-            FROM history 
-            WHERE question_id = ?
+            SELECT complete_count, correct_count
+            FROM question_stats
+            WHERE id = ?
         ''', (question_id,))
         
-        row = c.fetchone()
+        stats_row = c.fetchone()
         
-        if row and row['total_answered']:
-            total_answered = row['total_answered']
-            total_correct = row['total_correct'] if row['total_correct'] else 0
-            
-            # 计算正确率（百分比，保留1位小数）
-            accuracy = round((total_correct / total_answered) * 100, 1) if total_answered > 0 else 0.0
-            
-            return {
-                'total_answered': total_answered,
-                'total_correct': total_correct,
-                'accuracy': accuracy
-            }
+        if stats_row:
+            total_answered = stats_row['complete_count']
+            total_correct = stats_row['correct_count']
+
         else:
-            # 如果还没有答题记录，返回0值
-            return {
-                'total_answered': 0,
-                'total_correct': 0,
-                'accuracy': 0.0
-            }
+            # 如果没有统计记录，从history表聚合
+            c.execute('''
+                SELECT 
+                    SUM(correct_count + wrong_count) as total_answered,
+                    SUM(correct_count) as total_correct
+                FROM history
+                WHERE question_id = ?
+            ''', (question_id,))
+            
+            history_row = c.fetchone()
+            
+            if history_row and history_row['total_answered']:
+                total_answered = history_row['total_answered']
+                total_correct = history_row['total_correct'] if history_row['total_correct'] else 0
+            else:
+                total_answered = 0
+                total_correct = 0
+        
+        # 计算正确率（百分比，保留1位小数）
+        accuracy = round((total_correct / total_answered) * 100, 1) if total_answered > 0 else 0.0
+        
+        return {
+            'total_answered': total_answered,
+            'total_correct': total_correct,
+            'accuracy': accuracy
+        }
             
     except Exception as e:
         db_logger.error(f"Error getting question stats for {question_id}: {e}")
@@ -612,511 +449,6 @@ def get_question_stats(conn, question_id):
             'total_correct': 0,
             'accuracy': 0.0
         }
-
-def get_bank_progress(user_id, bank_name):
-    """获取用户在指定题库的完成进度"""
-    conn = get_db()
-    c = conn.cursor()
-    
-    # 获取题库总题数
-    total = get_question_count(conn, bank_name)
-    
-    # 获取用户已做题数 - 使用新的bank_name字段确保准确性
-    c.execute('''
-        SELECT COUNT(DISTINCT question_id) as answered
-        FROM history 
-        WHERE user_id = ? AND bank_name = ?
-    ''', (user_id, bank_name))
-    answered_row = c.fetchone()
-    answered = answered_row['answered'] if answered_row else 0
-    
-    # 计算进度百分比
-    progress = answered / total if total > 0 else 0
-    
-    return {
-        'total': total,
-        'answered': answered,
-        'progress': round(progress * 100, 2)  # 转换为百分比，保留两位小数
-    }
-
-def extract_qid_number(qid):
-    """
-    从题目ID中提取数字部分。
-    支持格式：bankname_qid 或 纯数字ID
-    """
-    if not qid:
-        return 0
-    
-    # 从最后一个下划线后提取数字部分
-    if '_' in qid:
-        num_part = qid.rsplit('_', 1)[-1]
-    else:
-        num_part = qid
-    
-    try:
-        return int(num_part)
-    except ValueError:
-        # 如果无法转换为数字，返回0确保排序在最后
-        return 0
-
-def restore_qid(bank_name: str, id: int = 1) -> str:
-    """
-    将题库名和纯数字 ID 组合成新的 QID。
-    
-    参数:
-        bank_name: 字符串，表示题库名。
-        id: 整数，表示数字 ID，默认为 1。
-    
-    返回:
-        字符串，格式为 "bankname_id"，其中 bankname 是 bank_name 的字符串形式，
-        id 是数字 ID 的字符串形式，用下划线连接。
-    
-    示例:
-        >>> restore_qid("math", 1)
-        'math_1'
-        >>> restore_qid("physics")
-        'physics_1'
-    
-    注意:
-        - 函数会自动将输入转换为字符串，以确保兼容性。
-        - 如果 bank_name 为 None 或空，会转换为字符串 "None" 或空字符串。
-        - id 应为整数，但函数会处理非整数输入（如字符串数字），将其转换为字符串。
-    """
-    # 确保 bank_name 转换为字符串，处理可能的 None 或其他类型
-    bank_name_str = str(bank_name) if bank_name is not None else "None"
-    
-    # 确保 id 转换为字符串，虽然 id 应为整数，但为健壮性处理其他类型
-    id_str = str(id)
-    
-    # 使用下划线连接并返回
-    return f"{bank_name_str}_{id_str}"
-
-def get_last_unfinished_exam(user_id):
-    """
-    获取用户最后一次未完成的考试
-    
-    Args:
-        user_id (int): 用户ID
-        
-    Returns:
-        sqlite3.Row or None: 考试记录，如果不存在则返回None
-    """
-    conn = get_db()
-    c = conn.cursor()
-    c.execute('''
-        SELECT 
-            id,
-            question_ids,
-            answers,
-            start_time,
-            duration,
-            completed,
-            score
-        FROM exam_sessions 
-        WHERE user_id = ? AND completed = 0
-        ORDER BY start_time DESC
-        LIMIT 1
-    ''', (user_id,))
-    return c.fetchone()
-
-# ========== 修改题目 ===========
-def get_question_by_id(question_id):
-    """
-    根据题目ID获取题目详情
-    
-    Args:
-        question_id (str): 题目ID
-        
-    Returns:
-        dict or None: 题目信息字典，如果不存在返回None
-    """
-    conn = get_db()
-    c = conn.cursor()
-    
-    try:
-        c.execute('''
-            SELECT id, stem, answer, difficulty, qtype, category, options, bank_name
-            FROM questions 
-            WHERE id = ?
-        ''', (question_id,))
-        
-        row = c.fetchone()
-        if row:
-            question = {
-                'id': row['id'],
-                'stem': row['stem'],
-                'answer': row['answer'],
-                'difficulty': row['difficulty'],
-                'qtype': row['qtype'],
-                'category': row['category'],
-                'options': json.loads(row['options']) if row['options'] else {},
-                'bank_name': row['bank_name']
-            }
-            return question
-        return None
-    except Exception as e:
-        print(f"Error getting question by ID: {e}")
-        return None
-    
-def update_question_in_db(question_id, updated_data):
-    """
-    更新数据库中的题目信息
-    
-    Args:
-        question_id (str): 题目ID
-        updated_data (dict): 更新后的题目数据
-        
-    Returns:
-        bool: 是否成功更新
-    """
-    conn = get_db()
-    c = conn.cursor()
-    
-    try:
-        # 获取题目原来的信息（用于获取bank_name）
-        c.execute('SELECT bank_name FROM questions WHERE id = ?', (question_id,))
-        row = c.fetchone()
-        if not row:
-            return False
-        
-        bank_name = row['bank_name']
-
-        # 准备更新数据
-        stem = updated_data.get('stem', '')
-        answer = updated_data.get('answer', '')
-        difficulty = updated_data.get('difficulty', '未知')
-        qtype = updated_data.get('qtype', '未知')
-        category = updated_data.get('category', '未分类')
-        options = json.dumps(updated_data.get('options', {}), ensure_ascii=False)
-
-        # 更新数据库
-        c.execute('''
-            UPDATE questions 
-            SET stem = ?, answer = ?, difficulty = ?, qtype = ?, category = ?, options = ?
-            WHERE id = ?
-        ''', (stem, answer, difficulty, qtype, category, options, question_id))
-        
-        conn.commit()
-        db_logger.info(f"Updated question {question_id} in database")
-        
-        # 同步更新CSV文件
-        success = update_question_in_csv(bank_name, question_id, updated_data)
-        if not success:
-            db_logger.warning(f"Failed to update CSV for question {question_id}")
-        
-        return True
-    except Exception as e:
-        print(f"Error updating question in database: {e}")
-        db_logger.error(f"Error updating question {question_id}: {e}")
-        conn.rollback()
-        return False
-def update_question_in_csv(bank_name, question_id, updated_data):
-    """
-    更新CSV文件中的题目信息
-    
-    Args:
-        bank_name (str): 题库名称（不带.csv后缀）
-        question_id (str): 题目ID
-        updated_data (dict): 更新后的题目数据
-        
-    Returns:
-        bool: 是否成功更新
-    """
-    try:
-        # 构建CSV文件路径
-        csv_file = os.path.join('./questions-bank', f"{bank_name}.csv")
-        
-        if not os.path.exists(csv_file):
-            print(f"CSV file not found: {csv_file}")
-            return False
-        
-        # 读取CSV文件
-        with open(csv_file, 'r', encoding='utf-8-sig') as f:
-            reader = csv.DictReader(f)
-            rows = list(reader)
-            fieldnames = reader.fieldnames
-        
-        # 查找要更新的行
-        updated = False
-        for i, row in enumerate(rows):
-            # 从题目ID中提取原始题号（去掉bank_name_前缀）
-            original_id = question_id.replace(f"{bank_name}_", "")
-            if row.get('题号') == original_id:
-                # 更新行数据
-                rows[i]['题干'] = updated_data.get('stem', row.get('题干', ''))
-                rows[i]['答案'] = updated_data.get('answer', row.get('答案', ''))
-                rows[i]['难度'] = updated_data.get('difficulty', row.get('难度', '未知'))
-                rows[i]['题型'] = updated_data.get('qtype', row.get('题型', '未知'))
-                rows[i]['类别'] = updated_data.get('category', row.get('类别', '未分类'))
-                
-                # 更新选项
-                options = updated_data.get('options', {})
-                for opt in ['A', 'B', 'C', 'D', 'E']:
-                    if opt in options:
-                        rows[i][opt] = options[opt]
-                    elif opt in rows[i]:
-                        # 如果新的options中没有这个选项，但CSV中有，清空它
-                        rows[i][opt] = ''
-                
-                updated = True
-                break
-        
-        if not updated:
-            print(f"Question {question_id} not found in CSV file")
-            return False
-        
-        # 写回CSV文件
-        with open(csv_file, 'w', encoding='utf-8-sig', newline='') as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(rows)
-        
-        db_logger.info(f"Updated question {question_id} in CSV file {bank_name}.csv")
-        return True
-        
-    except Exception as e:
-        print(f"Error updating CSV file: {e}")
-        db_logger.error(f"Error updating CSV for question {question_id}: {e}")
-        return False
-
-def add_question_to_db(bank_name, question_data):
-    """
-    向数据库和CSV文件添加新题目
-    
-    Args:
-        bank_name (str): 题库名称（不带.csv后缀）
-        question_data (dict): 题目数据
-        
-    Returns:
-        tuple: (成功状态, 新题目ID或错误消息)
-    """
-    conn = get_db()
-    c = conn.cursor()
-    
-    try:
-        # 1. 生成新的题目ID
-        # 获取当前题库中最大的数字ID
-        c.execute('''
-            SELECT id FROM questions 
-            WHERE bank_name = ? 
-            ORDER BY CAST(
-                CASE 
-                    WHEN instr(id, '_') > 0 THEN substr(id, instr(id, '_') + 1)
-                    ELSE id 
-                END 
-            AS INTEGER) DESC
-            LIMIT 1
-        ''', (bank_name,))
-        
-        max_id_row = c.fetchone()
-        max_num = 0
-        
-        if max_id_row:
-            # 从ID中提取数字部分
-            last_id = max_id_row['id']
-            if '_' in last_id:
-                num_part = last_id.split('_', 1)[1]
-            else:
-                num_part = last_id
-            
-            try:
-                max_num = int(num_part)
-            except ValueError:
-                max_num = 0
-        
-        # 生成新ID（数字部分+1）
-        new_id_num = max_num + 1
-        new_question_id = f"{bank_name}_{new_id_num}"
-        
-        # 2. 准备插入数据
-        stem = question_data.get('stem', '').strip()
-        answer = question_data.get('answer', '').strip()
-        difficulty = question_data.get('difficulty', '未知')
-        qtype = question_data.get('qtype', '未知')
-        category = question_data.get('category', '未分类')
-        options = json.dumps(question_data.get('options', {}), ensure_ascii=False)
-        
-        # 3. 插入到数据库
-        c.execute('''
-            INSERT INTO questions (id, stem, answer, difficulty, qtype, category, options, bank_name)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (new_question_id, stem, answer, difficulty, qtype, category, options, bank_name))
-        
-        conn.commit()
-        
-        # 4. 同步到CSV文件
-        success = add_question_to_csv(bank_name, new_id_num, question_data)
-        
-        if success:
-            db_logger.info(f"Added new question {new_question_id} to database and CSV")
-            return True, new_question_id
-        else:
-            # CSV写入失败，回滚数据库操作
-            conn.rollback()
-            return False, "CSV文件写入失败"
-            
-    except Exception as e:
-        print(f"Error adding question to database: {e}")
-        db_logger.error(f"Error adding question: {e}")
-        conn.rollback()
-        return False, str(e)
-
-def add_question_to_csv(bank_name, question_num, question_data):
-    """
-    向CSV文件添加新题目
-    
-    Args:
-        bank_name (str): 题库名称（不带.csv后缀）
-        question_num (int): 题目编号
-        question_data (dict): 题目数据
-        
-    Returns:
-        bool: 是否成功添加
-    """
-    try:
-        # 构建CSV文件路径
-        csv_file = os.path.join('./questions-bank', f"{bank_name}.csv")
-        
-        # 如果CSV文件不存在，创建新文件
-        if not os.path.exists(csv_file):
-            print(f"CSV file not found, creating new: {csv_file}")
-            create_new_csv_file(csv_file)
-        
-        # 读取现有数据
-        with open(csv_file, 'r', encoding='utf-8-sig') as f:
-            reader = csv.DictReader(f)
-            rows = list(reader)
-            fieldnames = reader.fieldnames
-        
-        # 准备新行数据
-        new_row = {
-            '题号': str(question_num),
-            '题干': question_data.get('stem', ''),
-            '答案': question_data.get('answer', ''),
-            '难度': question_data.get('difficulty', '未知'),
-            '题型': question_data.get('qtype', '未知'),
-            '类别': question_data.get('category', '未分类')
-        }
-        
-        # 添加选项
-        options = question_data.get('options', {})
-        for opt in ['A', 'B', 'C', 'D', 'E']:
-            if opt in options:
-                new_row[opt] = options[opt]
-            else:
-                new_row[opt] = ''
-        
-        # 确保所有字段都存在
-        for field in fieldnames:
-            if field not in new_row:
-                new_row[field] = ''
-        
-        # 添加新行
-        rows.append(new_row)
-        
-        # 写回CSV文件
-        with open(csv_file, 'w', encoding='utf-8-sig', newline='') as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(rows)
-        
-        db_logger.info(f"Added question {question_num} to CSV file {bank_name}.csv")
-        return True
-        
-    except Exception as e:
-        print(f"Error adding question to CSV: {e}")
-        db_logger.error(f"Error adding question to CSV: {e}")
-        return False
-
-def create_new_csv_file(csv_file_path):
-    """
-    创建新的CSV文件并写入表头
-    
-    Args:
-        csv_file_path (str): CSV文件路径
-    """
-    fieldnames = ['题号', '题干', '答案', '难度', '题型', '类别', 'A', 'B', 'C', 'D', 'E']
-    
-    with open(csv_file_path, 'w', encoding='utf-8-sig', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-    
-    print(f"Created new CSV file: {csv_file_path}")
-
-def get_enhanced_types(cursor, bank_name):
-    """
-    获取增强的题型列表，确保至少包含标准题型
-    
-    Args:
-        cursor: 数据库游标
-        bank_name (str): 题库名称
-        
-    Returns:
-        list: 题型列表（包含所有已有题型和标准题型）
-    """
-    # 查询数据库中已有的题型
-    cursor.execute('''
-        SELECT DISTINCT qtype 
-        FROM questions 
-        WHERE bank_name = ? AND qtype IS NOT NULL AND qtype != ''
-        ORDER BY qtype
-    ''', (bank_name,))
-    existing_types = [row['qtype'] for row in cursor.fetchall()]
-    
-    # 标准题型列表
-    standard_types = ['单选题', '多选题', '判断题', '填空题', '简答题']
-    
-    # 合并并去重，标准题型放在前面
-    all_types = []
-    
-    # 先添加标准题型（如果存在）
-    for stype in standard_types:
-        if stype not in all_types:
-            all_types.append(stype)
-    
-    # 再添加其他已有题型
-    for etype in existing_types:
-        if etype not in all_types:
-            all_types.append(etype)
-    
-    return all_types
-def get_enhanced_difficulties(cursor, bank_name):
-    """
-    获取增强的难度列表，确保至少包含标准难度
-    
-    Args:
-        cursor: 数据库游标
-        bank_name (str): 题库名称
-        
-    Returns:
-        list: 难度列表
-    """
-    cursor.execute('''
-        SELECT DISTINCT difficulty 
-        FROM questions 
-        WHERE bank_name = ? AND difficulty IS NOT NULL AND difficulty != ''
-        ORDER BY 
-            CASE difficulty
-                WHEN '简单' THEN 1
-                WHEN '中等' THEN 2
-                WHEN '困难' THEN 3
-                ELSE 4
-            END
-    ''', (bank_name,))
-    existing_difficulties = [row['difficulty'] for row in cursor.fetchall()]
-    
-    standard_difficulties = ['简单', '中等', '困难', '未知']
-    
-    all_difficulties = []
-    for sdif in standard_difficulties:
-        if sdif not in all_difficulties:
-            all_difficulties.append(sdif)
-    
-    for edif in existing_difficulties:
-        if edif not in all_difficulties:
-            all_difficulties.append(edif)
-    
-    return all_difficulties
 
 # ================= 数据库日志配置 =================
 def setup_db_logger():

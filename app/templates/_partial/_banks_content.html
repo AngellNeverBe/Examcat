@@ -1,0 +1,121 @@
+<!-- 分类导航栏 -->
+<div class="category-tabs-container">
+    <nav class="category-tabs-nav">
+        <ul class="category-tabs" id="categoryTabs">
+            {% for category in categories %}
+            <li class="category-tab {% if category == active_category %}active{% endif %}">
+                <a href="/ajax/banks?category={{ category }}" 
+                    class="ajax-nav-link category-tab-btn" 
+                    data-page="banks" 
+                    data-category="{{ category }}">
+                    {{ category }}
+                    <span class="category-badge">{{ category_stats[category].bank_count }}</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </nav>
+</div>
+
+<!-- 题库列表 -->
+<div class="banks-list">
+    {% if banks %}
+        {% for bank in banks %}
+        <div class="card bank-card {% if bank.is_current %}current{% endif %}" 
+            data-bank-id="{{ bank.id }}"
+            data-is-current="{{ 'true' if bank.is_current else 'false' }}">
+            
+            <div class="bank-header">
+                <div class="bank-info">
+                    <h3 class="bank-name">{{ bank.name }}</h3>
+                    <div class="bank-meta">
+                        <span class="total-questions">已答: {{ bank.answered }} / {{ bank.total }}</span>
+                        <span class="correct-questions">正确: {{ bank.correct }}</span>
+                        <span class="wrong-questions">错误: {{ bank.wrong }}</span>
+                    </div>
+                </div>
+
+                <div class="bank-actions">
+                    {% if bank.is_current %}
+                    <button class="btn btn-primary btn-switch-bank current-bank-btn" disabled data-bank-id="{{ bank.id }}">
+                        当前题库
+                    </button>
+                    {% else %}
+                    <button class="btn btn-primary btn-switch-bank" data-bank-id="{{ bank.id }}">
+                        切换题库
+                    </button>
+                    {% endif %}
+                    <button class="btn-toggle-details" data-bank-id="{{ bank.id }}">
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 三色进度条 -->
+            <div class="bank-progress">
+                <div class="progress-bar-stacked">
+                    <div class="progress-segment correct" style="width: {{ bank.correct_percentage }}%;" 
+                            title="正确: {{ bank.correct }}题 ({{ bank.correct_percentage }}%)"></div>
+                    <div class="progress-segment wrong" style="width: {{ bank.wrong_percentage }}%;" 
+                            title="错误: {{ bank.wrong }}题 ({{ bank.wrong_percentage }}%)"></div>
+                    <div class="progress-segment unanswered" style="width: {{ bank.unanswered_percentage }}%;" 
+                            title="未答: {{ bank.unanswered }}题 ({{ bank.unanswered_percentage }}%)"></div>
+                </div>
+                <!-- <div class="progress-labels">
+                    <span class="label-correct">正确 {{ bank.correct_percentage }}%</span>
+                    <span class="label-wrong">错误 {{ bank.wrong_percentage }}%</span>
+                    <span class="label-unanswered">未答 {{ bank.unanswered_percentage }}%</span>
+                </div> -->
+            </div>
+            
+            <!-- 下拉详情区域 -->
+            <div class="bank-details" id="details-{{ bank.id }}" style="display: none;">
+                {% if bank.category_count %}
+                <div class="category-details">
+                    {% for cat_name, cat_stats in bank.category_count_stats.items() %}
+                    <div class="category-detail-item">
+                        <div class="category-detail-info">
+                            <div class="category-name">{{ cat_name }}</div>
+
+                            <div class="category-meta">
+                                <span class="total-questions">已答: {{ cat_stats.answered }} / {{ cat_stats.count }}</span>
+                                <span class="correct-questions">正确: {{ cat_stats.correct }}</span>
+                                <span class="wrong-questions">错误: {{ cat_stats.wrong }}</span>
+                            </div>
+                        </div>
+
+                        <div class="category-progress">
+                            <div class="progress-bar-stacked">
+                                <div class="progress-segment correct" style="width: {{ cat_stats.correct_percentage }}%;" 
+                                        title="正确: {{ cat_stats.correct }}题 ({{ cat_stats.correct_percentage }}%)"></div>
+                                <div class="progress-segment wrong" style="width: {{ cat_stats.wrong_percentage }}%;" 
+                                        title="错误: {{ cat_stats.wrong }}题 ({{ cat_stats.wrong_percentage }}%)"></div>
+                                <div class="progress-segment unanswered" style="width: {{ cat_stats.unanswered_percentage }}%;" 
+                                        title="未答: {{ cat_stats.unanswered }}题 ({{ cat_stats.unanswered_percentage }}%)"></div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="no-category-data">暂无分类数据</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="no-banks-message">
+            <p>该分类下暂无题库</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- 管理员功能 -->
+{% if is_admin %}
+<div class="admin-actions">
+    <button class="btn-load-banks" id="btnLoadBanks">加载题库</button>
+    <button class="btn-upload-bank" id="btnUploadBank">上传题库</button>
+    <!-- 文件上传表单（隐藏） -->
+    <input type="file" id="bankFileInput" accept=".csv" style="display: none;">
+</div>
+{% endif %}

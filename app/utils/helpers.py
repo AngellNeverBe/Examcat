@@ -1,7 +1,6 @@
 """
 examcat - 通用辅助函数模块
 """
-
 import os
 import json
 import time
@@ -836,7 +835,7 @@ def log_execution_time(func):
 # 模块初始化
 # ============================================================================
 
-def init_helpers():
+# def init_helpers():
     """
     初始化辅助函数模块。
     """
@@ -844,4 +843,4 @@ def init_helpers():
     # 这里可以添加模块初始化逻辑
     
 # 自动初始化
-init_helpers()
+# init_helpers()

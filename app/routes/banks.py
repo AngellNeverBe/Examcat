@@ -2,159 +2,117 @@
 examcat - 题库管理路由蓝图
 """
 import os
-import csv
-from flask import Blueprint, render_template, request, flash, redirect, url_for
+from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify
 from ..utils.auth import login_required, get_user_id, admin_required
-from ..utils.database import get_db, get_available_banks, get_current_bank, set_current_bank, load_questions_to_db
+from ..utils.database import get_db, db_logger
+from ..utils.banks import get_current_bank_id, load_bank, add_bank, switch_current_bank
+from ..utils.page_data import get_banks_data
 
 banks_bp = Blueprint('banks', __name__, template_folder='../templates/base')
 
-def get_bank_question_count_from_csv(bank_name):
-    """
-    从CSV文件获取题库的题目总数。
-    这个方法用于当题库尚未加载到数据库时的备用统计。
-    """
-    try:
-        # 确保bank_name有.csv后缀来查找文件
-        if not bank_name.endswith('.csv'):
-            file_name = bank_name + '.csv'
-        else:
-            file_name = bank_name
-            bank_name = bank_name[:-4]  # 去掉.csv后缀存储
-        
-        bank_path = os.path.join('./questions-bank', file_name)
-        
-        if not os.path.exists(bank_path):
-            return 0
-        
-        with open(bank_path, 'r', encoding='utf-8-sig') as f:
-            reader = csv.reader(f)
-            # 跳过标题行
-            next(reader, None)
-            # 统计行数
-            count = sum(1 for row in reader)
-            return count
-    except Exception as e:
-        print(f"Error reading CSV {bank_name}: {e}")
-        return 0
-
-@banks_bp.route('/select_bank')
+@banks_bp.route('/banks')
 @login_required
-def select_bank():
-    """Route to select a question bank."""
+def banks():
+    """Route to banks."""
     user_id = get_user_id()
-    current_bank = get_current_bank(user_id)
-    available_banks = get_available_banks()
-    
-    # Get question count for each bank
-    bank_stats = []
-    conn = get_db()
-    c = conn.cursor()
-    
-    for bank in available_banks:
-        # 方法1：从数据库获取总题数
-        c.execute('SELECT COUNT(*) as count FROM questions WHERE bank_name = ?', (bank,))
-        count_row = c.fetchone()
-        total_from_db = count_row['count'] if count_row else 0
-        
-        # 如果数据库中没有该题库的记录，从CSV文件读取
-        total = total_from_db
-        if total == 0:
-            total = get_bank_question_count_from_csv(bank)
-        
-        # 修复：使用更准确的查询统计已答题数
-        c.execute('''
-            SELECT COUNT(DISTINCT h.question_id) as answered 
-            FROM history h
-            JOIN questions q ON h.question_id = q.id
-            WHERE h.user_id = ? AND q.bank_name = ?
-        ''', (user_id, bank))
-        answered_row = c.fetchone()
-        answered = answered_row['answered'] if answered_row else 0
-        
-        # 如果题库在数据库中不存在但CSV文件存在，可能需要加载
-        needs_loading = total_from_db == 0 and total > 0
-        
-        bank_stats.append({
-            'name': bank,
-            'total': total,
-            'answered': answered,
-            'is_current': bank == current_bank,
-            'needs_loading': needs_loading,
-            'progress_percentage': round((answered / total * 100), 2) if total > 0 else 0
-        })
-    
-    
-    
-    return render_template('select_bank.html', 
-                          banks=bank_stats,
-                          current_bank=current_bank)
+    data = get_banks_data(user_id)
+    return render_template('banks.html', **data)
 
 @banks_bp.route('/load_bank', methods=['POST'])
-@login_required
-def load_bank():
-    """Route to load a selected question bank."""
-    user_id = get_user_id()
-    bank_name = request.form.get('bank_name')
+@admin_required
+def load_all_banks():
+    """手动加载题库路由"""
+    result = load_bank()
     
-    if not bank_name:
-        flash("请选择题库", "error")
-        return redirect(url_for('banks.select_bank'))
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     
-    # Check if bank exists
-    available_banks = get_available_banks()
-    if bank_name not in available_banks:
-        flash("题库不存在", "error")
-        return redirect(url_for('banks.select_bank'))
-    
-    try:
-        # Set current bank for user
-        set_current_bank(user_id, bank_name)        
-        # Load questions from the selected bank
-        conn = get_db()
-        load_questions_to_db(conn, bank_name)
+    if is_ajax:
+        # AJAX 请求返回 JSON
+        if not result['errors'] and not result['missing_csv']:
+            status = 'success'
+            message = f"成功加载 {result['added']} 个新题库"
+        elif result['errors'] or result['missing_csv']:
+            status = 'partial' if result['added'] > 0 else 'error'
+            message = f"加载完成：新增 {result['added']} 个，失败 {len(result['errors'])} 个，缺失文件 {len(result['missing_csv'])} 个"
+        else:
+            status = 'info'
+            message = "没有发现新题库"
         
+        return jsonify({
+            'status': status, 
+            'message': message, 
+            'redirect_url': url_for('banks.banks')
+        })
+    else:
+        if result['added'] > 0:
+            flash(f"成功加载 {result['added']} 个新题库", "success")
+        if result['errors']:
+            for err in result['errors']:
+                flash(err, "danger")
+        if result['missing_csv']:
+            for miss in result['missing_csv']:
+                flash(miss, "warning")
+        if result['added'] == 0 and not result['errors'] and not result['missing_csv']:
+            flash("没有发现新题库", "info")
         
-        flash(f"已切换到题库: {bank_name}", "success")
-    except Exception as e:
-        flash(f"加载题库时出错: {str(e)}", "error")
-    
-    return redirect(url_for('main.index'))
+        return redirect(url_for('banks.banks'))
 
 @banks_bp.route('/upload_bank', methods=['POST'])
 @admin_required
 def upload_bank():
     """Route to upload a new question bank CSV file."""
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
     if 'bank_file' not in request.files:
+        if is_ajax:
+            return jsonify({'success': False, 'message': '没有选择文件'})
         flash("没有选择文件", "error")
-        return redirect(url_for('banks.select_bank'))
+        return redirect(url_for('banks.banks'))
     
     file = request.files['bank_file']
     if file.filename == '':
+        if is_ajax:
+            return jsonify({'success': False, 'message': '没有选择文件'})
         flash("没有选择文件", "error")
-        return redirect(url_for('banks.select_bank'))
+        return redirect(url_for('banks.banks'))
     
     if not file.filename.endswith('.csv'):
+        if is_ajax:
+            return jsonify({'success': False, 'message': '只支持CSV格式文件'})
         flash("只支持CSV格式文件", "error")
-        return redirect(url_for('banks.select_bank'))
+        return redirect(url_for('banks.banks'))
     
     try:
-        # Save the uploaded file
+        # 保存上传文件
         banks_dir = './questions-bank'
         os.makedirs(banks_dir, exist_ok=True)
         filepath = os.path.join(banks_dir, file.filename)
         file.save(filepath)
         
-        # Load the new bank into database
-        conn = get_db()
-        load_questions_to_db(conn, file.filename)
+        # 提取题库名（去除.csv后缀）
+        bankname = os.path.splitext(file.filename)[0]
         
+        # 调用add_bank导入题库
+        bank_id = add_bank(filepath, bankname=bankname)
         
-        flash(f"题库 {file.filename} 上传成功", "success")
+        if is_ajax:
+            return jsonify({
+                'success': True,
+                'message': f'题库 {bankname} 上传成功, 新题库id为 {bank_id}',
+                'redirect_url': url_for('banks.banks')
+            })
+        flash(f"题库 {bankname} 上传成功", "success")
     except Exception as e:
+        db_logger.error(f"上传题库失败: {str(e)}")
+        if is_ajax:
+            return jsonify({
+                'success': False, 
+                'message': f'上传题库时出错: {str(e)}', 
+                'redirect_url': url_for('banks.banks')
+            })
         flash(f"上传题库时出错: {str(e)}", "error")
     
-    return redirect(url_for('banks.select_bank'))
+    return redirect(url_for('banks.banks'))
 
 @banks_bp.route('/delete_bank', methods=['POST'])
 @admin_required
@@ -162,11 +120,11 @@ def delete_bank():
     """Route to delete a question bank."""
     bank_name = request.form.get('bank_name')
     user_id = get_user_id()
-    current_bank = get_current_bank(user_id)
+    current_bank = get_current_bank_id(user_id)
     
     if not bank_name:
         flash("请选择要删除的题库", "error")
-        return redirect(url_for('banks.select_bank'))
+        return redirect(url_for('banks.banks'))
     
     # Don't allow deleting the current bank
     if bank_name == current_bank:
@@ -180,7 +138,7 @@ def delete_bank():
             set_current_bank(user_id, new_bank)
         else:
             flash("不能删除唯一的题库", "error")
-            return redirect(url_for('banks.select_bank'))
+            return redirect(url_for('banks.banks'))
     
     try:
         # Delete from database first
@@ -221,37 +179,59 @@ def delete_bank():
     except Exception as e:
         flash(f"删除题库时出错: {str(e)}", "error")
     
-    return redirect(url_for('banks.select_bank'))
+    return redirect(url_for('banks.banks'))
 
-@banks_bp.route('/auto_load_all_banks')
-@admin_required
-def auto_load_all_banks():
-    """自动加载所有尚未加载到数据库的题库（开发调试用）"""
+@banks_bp.route('/switch_bank', methods=['POST'])
+@login_required
+def switch_bank():
+    """AJAX切换当前题库 - 修复cookie删除问题"""
     user_id = get_user_id()
-    available_banks = get_available_banks()
     
-    conn = get_db()
-    c = conn.cursor()
-    loaded_count = 0
+    bank_id = request.form.get('bank_id')
+    if not bank_id or not bank_id.isdigit():
+        return jsonify({'success': False, 'error': '无效的题库ID'})
     
-    for bank in available_banks:
-        # 检查是否已加载
-        c.execute('SELECT COUNT(*) as count FROM questions WHERE bank_name = ?', (bank,))
-        count_row = c.fetchone()
-        if count_row and count_row['count'] == 0:
-            # 题库未加载，加载它
-            try:
-                load_questions_to_db(conn, bank)
-                loaded_count += 1
-                print(f"自动加载题库: {bank}")
-            except Exception as e:
-                print(f"加载题库 {bank} 时出错: {e}")
+    bank_id = int(bank_id)
     
-    
-    
-    if loaded_count > 0:
-        flash(f"已自动加载 {loaded_count} 个题库", "success")
-    else:
-        flash("所有题库均已加载", "info")
-    
-    return redirect(url_for('banks.select_bank'))
+    try:
+        # 记录当前cookie状态
+        from ..utils.cookie import cookie_logger
+        old_seq_qid = request.cookies.get('current_seq_qid')
+        old_bank_id = request.cookies.get('current_bank_id')
+        # cookie_logger.info(f"[switch_bank] 切换前: seq_qid={old_seq_qid}, bank_id={old_bank_id}")
+        # cookie_logger.info(f"[switch_bank] 切换到: bank_id={bank_id}")
+        
+        # 获取新cookie
+        cookies = switch_current_bank(user_id, bank_id)
+        cookie_logger.info(f"[switch_bank] 新cookies: {cookies}")
+        
+        # 创建响应
+        response = jsonify({
+            'success': True,
+            'message': '题库切换成功',
+            'bank_id': bank_id,
+            'old_seq_qid': old_seq_qid,
+            'old_bank_id': old_bank_id
+        })
+        
+        # 删除旧的current_seq_qid cookie
+        from ..utils.cookie import delete_cookie, set_cookies_from_dict
+        
+        # 使用delete_cookie（设置过期）
+        response = delete_cookie(response, 'current_seq_qid')
+        cookie_logger.info(f"[switch_bank] 删除current_seq_qid")
+        
+        # 设置新cookie
+        response = set_cookies_from_dict(response, cookies)
+        
+        # 记录响应头
+        cookie_headers = [h for h in response.headers if h[0] == 'Set-Cookie']
+        cookie_logger.info(f"[switch_bank] Set-Cookie头数: {len(cookie_headers)}")
+        
+        return response
+        
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)})
+    except Exception as e:
+        db_logger.error(f"切换题库失败: {str(e)}", exc_info=True)
+        return jsonify({'success': False, 'error': f'切换题库失败: {str(e)}'})

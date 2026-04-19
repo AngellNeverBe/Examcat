@@ -1,3 +1,101 @@
-body > div > div.container {
-    flex: 0
+.input-group {
+    position: relative;
 }
+
+.input-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray-500);
+}
+
+.form-control {
+    padding-left: 2.5rem;
+}
+
+.auth-container {
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.auth-page-wrapper {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.auth-container {
+    display: flex;
+    max-width: 600px;
+    margin: 0 0;
+    padding: 3rem;
+    background-color: #ffffff25;
+    border-radius: var(--border-radius);
+    backdrop-filter: blur(5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.13);
+    flex-direction: column;
+    justify-content: center;
+}
+
+.auth-logo {
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.auth-title {
+  font-family: 'youth';
+  text-align: center;
+  color: var(--gray-800);
+  font-size: 1.75rem;
+  margin-bottom: 1rem;
+}
+
+.auth-form {
+  margin-bottom: 1.5rem;
+}
+
+.auth-footer {
+  text-align: center;
+  margin-top: 1.5rem;
+  color: var(--gray-800);
+}
+
+.auth-footer a {
+  color: var(--primary-hover);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.auth-footer a:hover {
+  text-decoration: underline;
+}
+
+/* 输入框优化 */
+.form-control {
+    padding: 0.75rem 3rem;
+    background: #ffffff25;
+}
+.form-group {
+    margin-bottom: 1rem;
+}
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-text-fill-color: #000000 !important;
+    background-color: rgba(255, 255, 255, 0); /* 指定背景颜色 */
+    transition: background-color 5000s ease-in-out 0s; /* 防止背景颜色闪烁 */
+}
+

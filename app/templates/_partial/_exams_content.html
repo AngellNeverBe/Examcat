@@ -1,0 +1,110 @@
+<!-- 考试主页面布局 -->
+<div class="exams-container">
+    <!-- 左侧卡片：开始考试和继续考试 -->
+    <div class="exams-left-panel">
+        <div class="card exams-start-card">
+            <h3 class="card-title">开始考试</h3>
+            
+            <!-- 开始考试表单 -->
+            <form id="startExamForm" method="POST" action="{{ url_for('exams.start_exam') }}">
+                <div class="form-group">
+                    <label for="questionCount">题目数量</label>
+                    <select id="questionCount" name="question_count" class="form-control">
+                        <option value="10">10题</option>
+                        <option value="20" selected>20题</option>
+                        <option value="50">50题</option>
+                        <option value="100">100题</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-start-exam">
+                    <i class="fas fa-play-circle"></i> 开始考试
+                </button>
+            </form>
+            
+            <!-- 继续考试按钮 -->
+            <div class="continue-exam-section">
+                {% if last_unfinished_exam %}
+                <a href="{{ url_for('exams.continue_exam', exam_id=last_unfinished_exam.id) }}"
+                   class="ajax-nav-link btn btn-warning btn-continue-exam">
+                    <i class="fas fa-redo"></i> 继续考试
+                </a>
+                <p class="continue-exam-info">
+                    上次开始时间: {{ last_unfinished_exam.start_time }}
+                </p>
+                {% else %}
+                <button class="btn btn-secondary btn-continue-exam" disabled>
+                    <i class="fas fa-redo"></i> 无未完成考试
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- 右侧卡片：考试历史 -->
+    <div class="exams-right-panel">
+        <div class="card exams-history-card">
+            <div class="card-header">
+                <i class="fas fa-bars"></i> 最近考试
+            </div>
+            
+            <div class="history-scroll-container">
+                <div class="history-items" id="historyItems">
+                    {% if recent_exams %}
+                        {% for exam in recent_exams %}
+                        <div class="history-item" data-exam-id="{{ exam.id }}">
+                            <div class="history-item-header">
+                                <div class="exam-time">
+                                    <i class="far fa-clock"></i>
+                                    {{ exam.formatted_start_time }}
+                                </div>
+                                <div class="exam-status">
+                                    <span class="badge badge-{{ 'success' if exam.completed else 'warning' }}">
+                                        {{ exam.status }}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="history-item-body">
+                                <div class="exam-info">
+                                    <div class="info-row">
+                                        <span class="info-label">题数:</span>
+                                        <span class="info-value">{{ exam.question_count }}题</span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">用时:</span>
+                                        <span class="info-value">{{ exam.formatted_duration }}</span>
+                                    </div>
+                                    {% if exam.completed %}
+                                    <div class="info-row">
+                                        <span class="info-label">得分:</span>
+                                        <span class="info-value {{ exam.score_class }}">{{ exam.score|round(1) }}%</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="exam-actions mt-2">
+                                <a href="{{ url_for('exams.exam_main', exam_id=exam.id) }}" 
+                                    class="ajax-nav-link btn btn-sm btn-outline-primary">
+                                    {% if exam.completed %}
+                                    <i class="fas fa-external-link-alt"></i> 查看详情
+                                    {% else %}
+                                    <i class="fas fa-external-link-alt"></i> 继续考试
+                                    {% endif %}
+                                </a>
+                            </div>
+
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="no-history-message">
+                            <p>暂无考试记录</p>
+                            <p>点击"开始考试"按钮开始你的第一次考试</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

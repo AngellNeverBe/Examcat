@@ -1,0 +1,502 @@
+/* 分类导航栏 */
+.category-tabs-container {
+    margin-bottom: 2rem;
+    padding: 0;
+}
+
+.category-tabs-nav {
+    z-index: 1;
+    /* overflow-x: auto; */
+    /* -webkit-overflow-scrolling: touch; */
+    border-radius: 10rem;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-content: center;
+    justify-content: center;
+    align-items: center;
+}
+
+.category-tabs {
+    display: flex;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    gap: 0.5rem;
+    min-width: min-content;
+}
+
+.category-tab {
+    flex-shrink: 0;
+}
+
+.category-tab-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background-color: white;
+    border: 1px solid var(--gray-300);
+    border-radius: 10rem;
+    color: var(--gray-700);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.category-tab-btn:hover {
+    background-color: var(--gray-100);
+    border-color: var(--gray-400);
+}
+
+.category-tab.active .category-tab-btn {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+.category-badge {
+    background-color: var(--gray-200);
+    color: var(--gray-700);
+    font-size: 0.75rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 1rem;
+    font-weight: 600;
+}
+
+.category-tab.active .category-badge {
+    background-color: rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+/* 题库卡片 */
+.banks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.bank-card {
+    margin: 0;
+}
+
+/* 题库卡片选中状态 */
+.bank-card.selected {
+    border-color: var(--info-color);
+    background-color: #e7f3ff;
+    box-shadow: 0 0 5px 3px rgba(0, 123, 255, 0.1);
+    transition: all 0.3s ease;
+}
+/* 当前题库卡片样式（与选中状态类似但更突出） */
+.bank-card.current {
+    border: 2px solid var(--warning-color);
+    box-shadow: 
+        rgba(223, 201, 91, 0.16) 0px 10px 36px 0px, 
+        rgba(223, 201, 91, 0.06) 0px 0px 0px 1px;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 8px 25px rgba(255, 193, 7, 0.3);
+    }
+    50% {
+        box-shadow: 0 8px 30px rgba(255, 193, 7, 0.5);
+    }
+    100% {
+        box-shadow: 0 8px 25px rgba(255, 193, 7, 0.3);
+    }
+}
+
+.bank-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.bank-info {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-content: center;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+}
+
+.bank-info h3 {
+    color: #333;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.bank-meta {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.bank-meta span {
+    font-size: 0.9rem;
+    color: var(--gray-600);
+    padding: 4px 8px;
+    background: var(--gray-100);
+    border-radius: 6px;
+}
+.correct-questions { color:var(--primary-color) !important}
+.wrong-questions { color:var(--danger-color) !important}
+
+.bank-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+.btn-switch-bank {
+    padding: 5px 10px;
+    border-radius: 1rem;
+    min-height: 10px;
+    font-size: 15px;
+    font-weight: 400;
+}
+.btn-switch-bank:disabled,
+.btn-switch-bank.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+.current-bank-badge {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3);
+}
+
+.btn-toggle-details {
+    background: transparent;
+    border: 2px solid #e9ecef;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #6c757d;
+}
+
+.btn-toggle-details:hover {
+    background: #f8f9fa;
+    border-color: #adb5bd;
+    color: #495057;
+    transform: rotate(180deg);
+}
+
+/* 进度条 */
+.bank-progress {
+    /* margin: 25px 0; */
+}
+
+.progress-bar-stacked {
+    display: flex;
+    height: 15px;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #f8f9fa;
+    margin-bottom: 10px;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.progress-segment {
+    height: 100%;
+    transition: width 0.5s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-segment.correct {
+    background: var(--success-color);
+}
+
+.progress-segment.wrong {
+    background: #D15D5E;
+}
+
+.progress-segment.unanswered {
+    background: var(--gray-200);
+}
+
+.progress-segment:hover {
+    filter: brightness(110%);
+    transform: scale(1.02);
+    z-index: 1;
+}
+
+/* .progress-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-top: 8px;
+} */
+
+.label-correct { color: var(--success-color); }
+.label-wrong { color: var(--danger-color); }
+.label-unanswered { color: var(--gray-600); }
+
+/* 下拉详情区域 */
+.bank-details {
+    margin-top: 25px;
+    padding-top: 25px;
+    border-top: 2px dashed #e9ecef;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.category-details {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.category-detail-info {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-content: center;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 2rem;
+    margin-bottom: 5px;
+}
+
+.category-detail-item {
+    /* background: rgba(248, 249, 250, 0.8); */
+    border-radius: 10px;
+    padding: 5px 10px 0 10px;
+    /* padding: 18px; */
+    /* border: 1px solid rgba(0,0,0,0.05); */
+    transition: all 0.3s ease;
+}
+
+.category-detail-item:hover {
+    background: white;
+    border-color: rgba(67, 97, 238, 0.2);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.category-name {
+    font-weight: 600;
+    color: #333;
+    font-size: 1rem;
+}
+
+.category-meta {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.category-meta span {
+    font-size: 0.8rem;
+    color: var(--gray-600);
+    padding: 1px 8px;
+    background: var(--gray-100);
+    border-radius: 6px;
+}
+
+.category-progress .progress-bar-stacked {
+    height: 10px;
+}
+
+.category-progress .progress-labels {
+    font-size: 0.8rem;
+}
+
+.no-category-data {
+    color: #6c757d;
+    font-style: italic;
+    text-align: center;
+    padding: 30px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.no-banks-message {
+    text-align: center;
+    padding: 60px 20px;
+    background: white;
+    border-radius: 12px;
+    border: 2px dashed #e9ecef;
+}
+
+.no-banks-message p {
+    color: #6c757d;
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+/* 管理员功能 */
+.admin-actions {
+    margin-top: 40px;
+    padding-top: 25px;
+    border-top: 2px solid #e9ecef;
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.admin-actions button {
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+    min-width: 140px;
+}
+
+.btn-load-banks {
+    background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
+    color: white;
+    box-shadow: 0 2px 5px rgba(23, 162, 184, 0.3);
+}
+
+.btn-load-banks:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(23, 162, 184, 0.4);
+}
+
+.btn-upload-bank {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3);
+}
+
+.btn-upload-bank:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .banks-page {
+        padding: 15px;
+    }
+    
+    .bank-header {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .bank-actions {
+        align-self: stretch;
+        justify-content: space-between;
+    }
+    
+    .bank-meta {
+        gap: 10px;
+    }
+    
+    .bank-meta span {
+        font-size: 0.8rem;
+        padding: 3px 6px;
+    }
+    
+    .category-tabs {
+        justify-content: center;
+    }
+    
+    .category-tab a {
+        padding: 10px 15px;
+        font-size: 0.9rem;
+    }
+    
+    .admin-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .admin-actions button {
+        width: 100%;
+        max-width: 300px;
+    }
+}
+
+@media (max-width: 480px) {
+    .bank-card {
+        padding: 18px;
+    }
+    
+    .bank-info h3 {
+        font-size: 1.1rem;
+    }
+    
+    .progress-bar-stacked {
+        height: 24px;
+    }
+    
+    .progress-labels {
+        font-size: 0.8rem;
+    }
+}
+
+/* 动画效果 */
+.bank-card {
+    animation: fadeInUp 0.5s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 工具提示样式 */
+/* [title] {
+    position: relative;
+} */
+
+/* [title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    z-index: 1000;
+    margin-bottom: 5px;
+} */
+
+/* [title]:hover::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #333;
+    margin-bottom: -5px;
+    z-index: 1000;
+} */

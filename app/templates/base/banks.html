@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block title %}题库 | {{ config.TITLE }}{% endblock %}
+
+{% block content %}
+    {% include '_partial/_banks_content.html' %}
+{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/banks.css') }}">
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/banks.js') }}"></script>
+{% endblock %}

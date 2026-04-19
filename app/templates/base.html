@@ -4,38 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ config.TITLE }}{% endblock %}</title>
-    
-    <!-- CSS文件 -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
-    
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">    
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
-    
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">   
-    
-     <!-- Favicon -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
-    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Favicon -->
+    <link rel="icon" href="{{ url_for('static', filename='img/favicon.png') }}">
     <!-- cursors -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/cursors.css') }}">
-
-    <!-- 额外样式 -->
+    <!-- ajax -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ajax_navigator.css') }}">
+    <!-- Other -->
     {% block styles %}{% endblock %}
-
     <!-- Artalk -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/artalk/2.9.1/Artalk.css">    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/artalk/2.9.1/Artalk.css">
 </head>
 <body>
+    
     <!-- 导航栏 -->
     <nav>
+        <div class="menu-backdrop" id="menuBackdrop"></div>
+
         <div class="nav-left">
-            <a href="{{ url_for('main.index') }}" class="nav-logo">
-                <img src="../static/img/favicon.png" style="width: 32px; height: 32px;"></img> {{ config.TITLE }}
+            <a href="{{ url_for('ajax.ajax_page', page_name='index') }}"  class="nav-logo ajax-nav-link" data-page="index">
+                <img src="{{ url_for('static', filename='img/favicon.png') }}"></img> {{ config.TITLE }}
             </a>
-        </div>
-        <div class="menu-backdrop" id="menuBackdrop">
+        </div>        
 
         </div>
         <!-- 移动端菜单按钮 -->
@@ -43,32 +39,93 @@
             <i class="fas fa-bars"></i>
         </button>
         
-        <!-- 导航链接 -->
-        <div class="nav-links" id="navLinks">
-            <a href="{{ url_for('banks.select_bank') }}" class="nav-link{% if request.path == url_for('banks.select_bank') %} active{% endif %}">
-                <i class="fas fa-folder-open"></i> 题库管理
+            <!-- 导航链接 -->
+            <div class="nav-links" id="navLinks">
+                <!-- 调试: request.path={{ request.path }}, url_for('main.index')={{ url_for('main.index') }}, url_for('ajax.ajax_page', page_name='index')={{ url_for('ajax.ajax_page', page_name='index') }} -->
+                <a href="{{ url_for('ajax.ajax_page', page_name='index') }}"
+                class="ajax-nav-link nav-link{% if request.path == url_for('main.index') or request.path == url_for('ajax.ajax_page', page_name='index') %} active{% endif %}"
+                data-page="index">
+                    <i class="fas fa-home"></i> 首页
+                </a>
+
+            <a href="{{ url_for('ajax.ajax_page', page_name='exams') }}" 
+            class="ajax-nav-link nav-link{% if request.path == url_for('exams.exams_index') %} active{% endif %}" 
+            data-page="exams">
+                <i class="fas fa-pencil"></i> 考试
+            </a>
+
+            <a href="{{ url_for('ajax.ajax_page', page_name='banks') }}" 
+            class="ajax-nav-link nav-link{% if request.path == url_for('banks.banks') %} active{% endif %}" 
+            data-page="banks">
+                <i class="fas fa-folder-open"></i> 题库
             </a>
             
-            <a href="{{ url_for('questions.search') }}" class="nav-link{% if request.path == url_for('questions.search') %} active{% endif %}">
-                <i class="fas fa-search"></i> 搜索题目
-            </a>
-            
-            <a href="{{ url_for('questions.wrong_questions') }}" class="nav-link{% if request.path == url_for('questions.wrong_questions') %} active{% endif %}">
-                <i class="fas fa-times-circle"></i> 查看错题
-            </a>
-            <a href="{{ url_for('favorites.show') }}" class="nav-link{% if request.path == url_for('favorites.show') %} active{% endif %}">
-                <i class="fas fa-star"></i> 我的收藏
-            </a>
-            <a href="{{ url_for('questions.show_history') }}" class="nav-link{% if request.path == url_for('questions.show_history') %} active{% endif %}">
-                <i class="fas fa-history"></i> 答题历史
-            </a>
-            <a href="{{ url_for('statistics.show') }}" class="nav-link{% if request.path == url_for('statistics.show') %} active{% endif %}">
-                <i class="fas fa-chart-bar"></i> 统计分析
+            <a href="{{ url_for('ajax.ajax_page', page_name='user') }}#profile" 
+            class="ajax-nav-link nav-link{% if request.path == url_for('auth.user_index') %} active{% endif %}" 
+            data-page="user">
+                <i class="fas fa-user"></i> 个人
             </a>
         </div>
-        <a href="{{ url_for('auth.logout') }}" class="btn btn-danger">
-            <i class="fas fa-sign-out-alt"></i> 退出
-        </a>
+
+        <div class="nav-right">
+        <!-- 用户中心下拉菜单 -->
+        <div class="user-dropdown">
+            <!-- 触发按钮 -->
+            <div class="user-trigger">
+                <i class="fas fa-quote-left"></i>
+                <span class="user-name">{{ session['username'] }}</span>
+                <i class="fas fa-chevron-down dropdown-arrow"></i>
+            </div>
+            
+            <!-- 下拉菜单内容 -->
+            <div class="dropdown-content">
+                <!-- 用户信息区域 -->
+                <div class="user-info-section">
+                    <div class="user-avatar">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                    <div class="user-details">
+                        <div class="user-name">{{ session['username'] }}</div>
+                        <div class="user-id">ID: {{ session['user_id'] }}</div>
+                        <div class="user-email">{{ session['email'] }}</div>
+                    </div>
+                </div>
+                
+                <!-- 分隔线 -->
+                <div class="dropdown-divider"></div>
+                
+                <!-- 功能菜单 -->
+                <a href="{{ url_for('ajax.ajax_page', page_name='user') }}#profile" class="dropdown-item ajax-nav-link" data-page="user">
+                    <i class="fas fa-user"></i>
+                    <span>个人资料</span>
+                </a>
+                
+                
+                <a href="{{ url_for('ajax.ajax_page', page_name='user') }}#statistics" class="dropdown-item ajax-nav-link" data-page="user">
+                    <i class="fas fa-chart-line"></i>
+                    <span>学习统计</span>
+                </a>
+                
+                <a href="{{ url_for('ajax.ajax_page', page_name='user') }}#favorites" class="dropdown-item ajax-nav-link" data-page="user">
+                    <i class="fas fa-star"></i>
+                    <span>我的收藏</span>
+                </a>
+
+                <a href="{{ url_for('ajax.ajax_page', page_name='user') }}#wrong" class="dropdown-item ajax-nav-link" data-page="user">
+                    <i class="fas fa-times-circle"></i>
+                    <span>我的错题</span>
+                </a>
+
+                <!-- 分隔线 -->
+                <div class="dropdown-divider"></div>
+                
+                <!-- 退出登录 -->
+                <a href="{{ url_for('auth.logout') }}" class="dropdown-item logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>退出登录</span>
+                </a>
+            </div>
+        </div>
     </nav>
     
     <!-- Flash消息 -->
@@ -93,16 +150,16 @@
         {% endwith %}
     {% endblock %}
     
-    {% block live2d %}{% endblock %}
     {% block confetti %}{% endblock %}
+    
     <!-- 主要内容 -->
-    <main class="container">
+    <main class="container" id="ajax-content">
         {% block content %}{% endblock %}
     </main>
     
     <!-- 页脚 -->
     <footer class="footer">
-        <div class="container">
+        <div class="container" style="padding: 10px;">
             <p class="footer-text">
                 &copy; 
                 <span id="copyright-year"></span> 
@@ -115,8 +172,28 @@
     
     <!-- JavaScript文件 -->
     <script src="{{ url_for('static', filename='js/base.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/ajax_navigator.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/ajax_nav_activator.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/index.js') }}" defer></script>
+    <!-- live2d -->
+    <script src="https://fastly.jsdelivr.net/npm/live2d-widgets@1.0.0/dist/autoload.js"></script>
     <!-- Artalk -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/artalk/2.9.1/Artalk.js" defer></script>
+    <!-- Artalk 配置 -->
+    <script>
+        // Artalk全局配置
+        window.ARTALK_CONFIG = {
+            server: '{{ config.ARTALK_SERVER }}',
+            site: '{{ config.ARTALK_SITE_NAME }}',
+            locale: '{{ config.ARTALK_LOCALE }}',
+            el: '#Comments',
+            darkMode: 'auto'
+        };
+    </script>
+    <!-- Artalk 管理器 -->
+    <script src="{{ url_for('static', filename='js/artalk-manager.js') }}" defer></script>
+
+    <!-- 页脚 -->
     <script>
         (function() {
             const currentYear = new Date().getFullYear();

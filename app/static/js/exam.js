@@ -292,20 +292,10 @@ function setupFormSubmit() {
         
         const action = submitter.value;
         
-        // 如果是保存按钮，已经被AJAX拦截，这里阻止默认提交
-        if (action === 'save') {
+        // 如果是保存或提交按钮，已经被AJAX拦截，这里阻止默认提交
+        if (action === 'save' || action === 'submit') {
             e.preventDefault();
             return;
-        }
-        
-        // 如果是提交按钮，添加确认提示
-        if (action === 'submit') {
-            const confirmed = confirm('确定要提交考试吗？提交后将无法修改答案。');
-            if (!confirmed) {
-                e.preventDefault();
-                return;
-            }
-            // 提交按钮允许正常表单提交（会刷新页面）
         }
     });
 }
@@ -450,6 +440,128 @@ function setupSaveButton() {
     });
 }
 
+// AJAX提交考试
+function setupSubmitButton() {
+    const submitButtons = document.querySelectorAll('button[value="submit"]');
+    
+    submitButtons.forEach(button => {
+        // 添加自定义类名
+        button.classList.add('btn-submit-progress');
+        
+        // 保存原始状态
+        const originalHTML = button.innerHTML;
+        const originalClasses = button.className;
+        
+        button.addEventListener('click', async function(e) {
+            e.preventDefault();
+            
+            if (config.examCompleted) return;
+            
+            // 确认提示
+            const confirmed = confirm('确定要提交考试吗？提交后将无法修改答案。');
+            if (!confirmed) return;
+            
+            const form = document.getElementById('examForm');
+            if (!form) return;
+            
+            // 收集表单数据
+            const formData = new FormData(form);
+            formData.append('action', 'submit');
+            formData.append('elapsed_time', totalSeconds);
+            
+            // 状态1：提交中
+            button.disabled = true;
+            button.classList.remove('success', 'error');
+            button.classList.add('submitting');
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 提交中...';
+            
+            try {
+                // 发送AJAX请求
+                const response = await fetch(config.saveUrl, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // 状态2：提交成功
+                    button.classList.remove('submitting');
+                    button.classList.add('success');
+                    button.innerHTML = '<i class="fas fa-check"></i> 提交成功';
+                    
+                    // 停止计时器
+                    if (timerInterval) {
+                        clearInterval(timerInterval);
+                        timerInterval = null;
+                    }
+                    
+                    // 显示成功消息
+                    showMessage(`考试提交成功！正确率：${data.correct_count}/${data.total} = ${data.score}%`, 'success');
+                    
+                    // 重新加载考试页面以显示结果（通过AJAX）
+                    setTimeout(() => {
+                        // 使用AJAX导航器重新加载当前页面
+                        if (window.ajaxNavigator) {
+                            window.ajaxNavigator.navigateTo(window.location.pathname, 'exam');
+                        } else {
+                            // 回退到普通重载
+                            window.location.reload();
+                        }
+                    }, 1500);
+                    
+                } else {
+                    throw new Error(data.message || '提交失败');
+                }
+            } catch (error) {
+                console.error('提交失败:', error);
+                
+                // 恢复原始状态
+                button.classList.remove('submitting');
+                button.disabled = false;
+                button.innerHTML = originalHTML;
+                
+                // 显示错误消息
+                showMessage(`提交失败: ${error.message}`, 'error');
+            }
+        });
+    });
+}
+
+// 显示消息函数
+function showMessage(message, type = 'info') {
+    // 移除现有的消息
+    document.querySelectorAll('.exam-flash-message').forEach(msg => msg.remove());
+    
+    // 创建消息元素
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `alert alert-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} exam-flash-message`;
+    messageDiv.innerHTML = `
+        <i class="fas fa-${type === 'error' ? 'exclamation-circle' : type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+        ${message}
+    `;
+    
+    // 添加到页面顶部
+    const examContent = document.querySelector('.exam-content');
+    if (examContent) {
+        examContent.insertBefore(messageDiv, examContent.firstChild);
+        
+        // 5秒后移除
+        setTimeout(() => {
+            if (messageDiv.parentNode) {
+                messageDiv.remove();
+            }
+        }, 5000);
+    }
+}
+
 // 新增：更新所有导航格子状态
 function updateAllGridStatuses() {
     const form = document.getElementById('examForm');
@@ -482,10 +594,23 @@ function updateAllGridStatuses() {
     }
 }
 
-// 页面初始化
-document.addEventListener('DOMContentLoaded', function() {
+// 初始化考试页面
+function initExamPage() {
+    // 检查是否在考试页面
+    const examConfig = document.getElementById('examConfig');
+    if (!examConfig) return;
+    
     // 重新加载配置
     ExamConfig.reloadConfig();
+    
+    // 更新总秒数
+    totalSeconds = config.elapsedTime;
+    
+    // 清除现有计时器（防止重复）
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
     
     // 初始化计时器
     updateTimerDisplay();
@@ -502,6 +627,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // 设置保存按钮的AJAX处理
     setupSaveButton();
     
+    // 设置提交按钮的AJAX处理
+    setupSubmitButton();
+    
     // 设置表单提交
     setupFormSubmit();
     
@@ -511,11 +639,42 @@ document.addEventListener('DOMContentLoaded', function() {
     // 设置鼠标悬停检测当前题目
     setupMouseHoverDetection();
     
-    // 页面离开时提示
-    window.addEventListener('beforeunload', function(e) {
+    // 页面离开时提示（确保只绑定一次）
+    window.removeEventListener('beforeunload', beforeUnloadHandler);
+    beforeUnloadHandler = function(e) {
         if (!config.examCompleted) {
             e.preventDefault();
             e.returnValue = '';
         }
-    });
-});
+    };
+    window.addEventListener('beforeunload', beforeUnloadHandler);
+}
+
+// beforeunload 事件处理函数引用
+let beforeUnloadHandler = null;
+
+// 页面初始化
+document.addEventListener('DOMContentLoaded', initExamPage);
+
+// AJAX页面更新后重新初始化
+window.addEventListener('page:content:updated', initExamPage);
+
+// 立即检查：如果脚本加载时页面已经就绪且是考试页面，立即初始化
+(function() {
+    // 检查是否在考试页面
+    const examConfig = document.getElementById('examConfig');
+    if (!examConfig) return;
+    
+    // 检查文档状态
+    if (document.readyState === 'loading') {
+        // 文档还在加载，等待DOMContentLoaded
+        document.addEventListener('DOMContentLoaded', function handler() {
+            document.removeEventListener('DOMContentLoaded', handler);
+            initExamPage();
+        });
+    } else {
+        // 文档已经加载完成，立即初始化
+        // 使用setTimeout确保DOM完全就绪
+        setTimeout(initExamPage, 0);
+    }
+})();

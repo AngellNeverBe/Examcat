@@ -11,14 +11,18 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Favicon -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
+    <link rel="icon" href="{{ url_for('static', filename='img/favicon.png') }}">
     <!-- cursors -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/cursors.css') }}">
+    <!-- ajax -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ajax_navigator.css') }}">
     <!-- Other -->
     {% block styles %}{% endblock %}
+    <!-- Artalk -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/artalk/2.9.1/Artalk.css">
 </head>
 <body>
-    <div class="auth-page-wrapper" style="min-height: 100vh; display: flex; flex-direction: column; justify-content: center;">
+    <div class="auth-page-wrapper">
         <!-- Flash消息 -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -45,12 +49,60 @@
                 </div>
             {% endif %}
         {% endwith %}
+
+        <!-- AJAX消息容器（用于JavaScript动态更新） -->
+        <div id="ajaxMessages" class="container" style="
+            max-width: 400px;
+            margin: 0 auto;
+            position: fixed;
+            top: 6%;
+            left: 50%;
+            z-index: 999;
+            transform: translate(-50%, -50%);
+            display: none;
+        "></div>
+
+        <div class="auth-container">
+            <div class="auth-logo">
+                <img src="../static/img/logo.webp" style="height: 96px; width: 96px"></img>
+            </div>
+            <!-- 主内容 -->
+            <div id="ajax-content">
+                {% block content %}
+                {% endblock %}
+            </div>
+            <!-- 页脚 -->
+            <footer style="text-align: center; margin-top: 2rem; color: var(--gray-600);">
+                <p class="footer-text">
+                    &copy; 
+                    <span id="copyright-year"></span> 
+                    {{ config.TITLE }} 考试猫 | By <a href="https://github.com/AngellNeverBe" class="footer-link" target="_blank" rel="noopener noreferrer">paracat</a>
+                    <br>
+                    Powered By <a href="https://github.com/CiE-XinYuChen/EXAM-MASTER" class="footer-link" target="_blank" rel="noopener noreferrer">ExamMaster</a>
+                </p>
+            </footer>
+        </div>
         
-        <!-- 主内容 -->
-        {% block content %}{% endblock %}
-    </div>
+    </div>    
+    <script src="{{ url_for('static', filename='js/ajax_navigator.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/base_auth.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/sakura.js') }}"></script>
+    <script>
+        (function() {
+            const currentYear = new Date().getFullYear();
+            const creationYear = 2026;
+            const yearSpan = document.getElementById('copyright-year');
+            
+            if (currentYear === creationYear) {
+            yearSpan.textContent = creationYear;
+            } else if (currentYear > creationYear) {
+            yearSpan.textContent = `${creationYear}-${currentYear}`;
+            } else {
+            // 如果当前年份小于创建年份（理论上不会发生）
+            yearSpan.textContent = creationYear;
+            }
+        })();
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

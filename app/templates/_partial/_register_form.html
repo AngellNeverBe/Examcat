@@ -1,0 +1,39 @@
+<h1 class="auth-title">注册 {{ config.TITLE }}</h1>
+
+<form method="post" class="auth-form" id="registerForm" action="{{ url_for('auth.register') }}">
+    <div class="form-group">
+        <div class="input-group">
+            <span class="input-icon"><i class="fas fa-user"></i></span>
+            <input type="text" id="username" name="username" class="form-control" required autocomplete="username" placeholder="用户名">
+        </div>
+    </div>
+
+    <div class="form-group">
+        <div class="input-group">
+            <span class="input-icon"><i class="fas fa-envelope"></i></span>
+            <input type="email" id="email" name="email" class="form-control" required autocomplete="email" placeholder="邮箱">
+        </div>
+    </div>
+    
+    <div class="form-group">
+        <div class="input-group">
+            <span class="input-icon"><i class="fas fa-lock"></i></span>
+            <input type="password" id="password" name="password" class="form-control" required autocomplete="new-password" placeholder="密码">
+        </div>
+    </div>
+    
+    <div class="form-group">
+        <div class="input-group">
+            <span class="input-icon"><i class="fas fa-check-circle"></i></span>
+            <input type="password" id="confirm_password" name="confirm_password" class="form-control" required autocomplete="new-password" placeholder="确认密码">
+        </div>
+    </div>
+    
+    <button type="button" class="btn btn-primary btn-block" id="registerButton">
+        <i class="fas fa-user-plus"></i> 创建账号
+    </button>
+</form>
+
+<div class="auth-footer">
+    <p>已有账号？ <a href="{{ url_for('ajax.ajax_page', page_name='login') }}" class="ajax-nav-link" data-page="login">立即登录</a></p>
+</div>

@@ -6,8 +6,10 @@ from flask import Blueprint, render_template, request, jsonify, session, flash, 
 from datetime import datetime, timedelta
 import json
 from ..utils.auth import login_required, get_user_id
-from ..utils.questions import fetch_question, fetch_random_question_ids
-from ..utils.database import get_db, get_current_bank, get_last_unfinished_exam, db_logger
+from ..utils.questions import fetch_question, get_random_question_ids
+from ..utils.banks import get_current_bank_id
+from ..utils.exams import get_last_unfinished_exam, get_recent_exams
+from ..utils.database import get_db, db_logger, add_history_record
 
 exams_bp = Blueprint('exams', __name__, template_folder='../templates/base')
 
@@ -18,17 +20,39 @@ def start_exam():
     新建考试项目
     """
     user_id = get_user_id()
-    
+
+    # 检查是否为AJAX请求
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
+              request.headers.get('X-Ajax-Navigation') == 'true'
+
     # 获取请求参数
     question_count = int(request.form.get('question_count', 10))
     
     # 获取当前题库并抽取题目
-    current_bank = get_current_bank(user_id)
-    question_ids = fetch_random_question_ids(question_count, user_id)
-    
+    current_bank_result = get_current_bank_id(user_id)
+    if not current_bank_result or current_bank_result[0] is None:
+        if is_ajax:
+            return jsonify({
+                'success': False,
+                'message': '未找到可用题库',
+                'category': 'error'
+            }), 400
+        else:
+            flash("未找到可用题库", "error")
+            return redirect(url_for('exams.exams_index'))
+    current_bank = current_bank_result[0]
+    question_ids = get_random_question_ids(question_count, user_id)
+
     if not question_ids:
-        flash("当前题库中没有足够的题目", "error")
-        return redirect(url_for('exams.show_exams'))
+        if is_ajax:
+            return jsonify({
+                'success': False,
+                'message': '当前题库中没有足够的题目',
+                'category': 'error'
+            }), 400
+        else:
+            flash("当前题库中没有足够的题目", "error")
+            return redirect(url_for('exams.exams_index'))
     
     # 初始化考试数据
     start_time = datetime.now()
@@ -41,16 +65,17 @@ def start_exam():
     c = conn.cursor()
     
     try:
-        # 插入新的考试记录，restart_time 初始等于 start_time
+        # 插入新的考试记录，restart_at 初始等于 start_at
         c.execute('''
-            INSERT INTO exam_sessions 
-            (user_id, question_ids, start_time, restart_time, duration, answers, completed, score) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO exams 
+            (user_id, question_ids, bank_id, start_at, restart_at, duration, answers, complete, score) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             user_id,
             json.dumps(question_ids),
+            current_bank,
             start_time,
-            start_time,  # restart_time 初始等于 start_time
+            start_time,  # restart_at 初始等于 start_at
             0,
             json.dumps(answers),
             completed,
@@ -59,16 +84,34 @@ def start_exam():
         exam_id = c.lastrowid
         conn.commit()
         db_logger.info(f"[{os.getpid()}] Add exam: 用户{user_id}, ID{exam_id}")
-        
-        # 重定向到考试主函数
-        return redirect(url_for('exams.exam_main', exam_id=exam_id))
+
+        if is_ajax:
+            # 返回JSON响应，指示导航到考试页面
+            return jsonify({
+                'success': True,
+                'message': '考试创建成功',
+                'category': 'success',
+                'redirect': url_for('exams.exam_main', exam_id=exam_id),
+                'ajax_navigate': True,
+                'exam_id': exam_id
+            })
+        else:
+            # 重定向到考试主函数
+            return redirect(url_for('exams.exam_main', exam_id=exam_id))
         
     except Exception as e:
         conn.rollback()
-        flash(f"启动考试失败: {str(e)}", "error")
-        return redirect(url_for('exams.show_exams'))
+        if is_ajax:
+            return jsonify({
+                'success': False,
+                'message': f'启动考试失败: {str(e)}',
+                'category': 'error'
+            }), 500
+        else:
+            flash(f"启动考试失败: {str(e)}", "error")
+            return redirect(url_for('exams.exams_index'))
 
-@exams_bp.route('/exam/<int:exam_id>', methods=['GET', 'POST'])
+@exams_bp.route('/exams/<int:exam_id>', methods=['GET', 'POST'])
 @login_required
 def exam_main(exam_id):
     """
@@ -78,35 +121,35 @@ def exam_main(exam_id):
     conn = get_db()
     c = conn.cursor()
     
-    # 获取考试记录，包含 restart_time
+    # 获取考试记录，包含 restart_at
     c.execute('''
         SELECT 
             id,
             question_ids,
             answers,
-            start_time,
-            restart_time,
+            start_at,
+            restart_at,
             duration,
-            completed,
+            complete,
             score
-        FROM exam_sessions 
+        FROM exams 
         WHERE id = ? AND user_id = ?
     ''', (exam_id, user_id))
     exam = c.fetchone()
     
     if not exam:
         flash("考试不存在或无权访问", "error")
-        return redirect(url_for('exams.show_exams'))
+        return redirect(url_for('exams.exams_index'))
     
     if request.method == 'GET':
         # GET请求：显示考试页面
         question_ids = json.loads(exam['question_ids'])
         answers = json.loads(exam['answers']) if exam['answers'] else []
         
-        # 如果考试未完成，更新 restart_time 为当前时间（继续考试的时刻）
-        if not exam['completed']:
+        # 如果考试未完成，更新 restart_at 为当前时间（继续考试的时刻）
+        if not exam['complete']:
             current_time = datetime.now()
-            c.execute('UPDATE exam_sessions SET restart_time = ? WHERE id = ?', (current_time, exam_id))
+            c.execute('UPDATE exams SET restart_at = ? WHERE id = ?', (current_time, exam_id))
             conn.commit()
         
         # 已用时间即为 duration（之前累加的总时间）
@@ -123,7 +166,7 @@ def exam_main(exam_id):
                 
                 # 计算题目是否正确（如果考试已完成）
                 is_correct = False
-                if exam['completed']:
+                if exam['complete']:
                     user_answer_str = user_answer
                     correct_answer_str = "".join(sorted(correct_answer))
                     is_correct = user_answer_str == correct_answer_str
@@ -157,8 +200,8 @@ def exam_main(exam_id):
             answer_str = "".join(sorted(user_answer)) if user_answer else ""
             new_answers.append(answer_str)
         
-        # 计算当前时间与 restart_time 的差值，累加到 duration
-        restart_time = datetime.strptime(exam['restart_time'], '%Y-%m-%d %H:%M:%S.%f')
+        # 计算当前时间与 restart_at 的差值，累加到 duration
+        restart_time = datetime.strptime(exam['restart_at'], '%Y-%m-%d %H:%M:%S.%f')
         current_time = datetime.now()
         session_duration = int((current_time - restart_time).total_seconds())
         total_duration = exam['duration'] + session_duration
@@ -176,28 +219,21 @@ def exam_main(exam_id):
                 user_answer_str = new_answers[idx]
                 correct_answer_str = "".join(sorted(q.get('answer', '')))
                 correct = int(user_answer_str == correct_answer_str)
-                correct_count += correct
-                    
+                bank_id = q['bank_id']
+
+                add_history_record(user_id, qid, user_answer_str, correct, bank_id)
                 # 保存到答题历史
-                c.execute('''
-                    INSERT INTO history (user_id, question_id, user_answer, correct)
-                    VALUES (?, ?, ?, ?)
-                ''', (
-                    user_id,
-                    qid,
-                    user_answer_str,
-                    correct
-                ))
                 db_logger.info(f"[{os.getpid()}] Add history: 用户{user_id}, 题目{qid}, 答案{user_answer_str}, 正确{correct}")
+                correct_count += correct
             
             # 计算分数
             score = (correct_count / total * 100) if total > 0 else 0
             completed = 1
             
-            # 更新考试记录：答案、duration、completed、score，restart_time 保持不变
+            # 更新考试记录：答案、duration、complete、score，restart_at 保持不变
             c.execute('''
-                UPDATE exam_sessions 
-                SET answers = ?, duration = ?, completed = ?, score = ?
+                UPDATE exams 
+                SET answers = ?, duration = ?, complete = ?, score = ?
                 WHERE id = ?
             ''', (
                 json.dumps(new_answers),
@@ -208,15 +244,33 @@ def exam_main(exam_id):
             ))
             db_logger.info(f"[{os.getpid()}] Submit exam: 用户{user_id}, ID{exam_id}, 完成{completed}")
             conn.commit()
-            flash(f"考试提交成功！正确率：{correct_count}/{total} = {score:.2f}%", "success")
-            return redirect(url_for('exams.exam_main', exam_id=exam_id))
+            
+            # 判断是否为AJAX请求
+            is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
+                      request.headers.get('X-Ajax-Navigation') == 'true'
+            
+            if is_ajax:
+                # 返回JSON响应
+                return jsonify({
+                    'success': True,
+                    'message': f'考试提交成功！正确率：{correct_count}/{total} = {score:.2f}%',
+                    'category': 'success',
+                    'correct_count': correct_count,
+                    'total': total,
+                    'score': round(score, 2),
+                    'completed': True,
+                    'exam_id': exam_id
+                })
+            else:
+                flash(f"考试提交成功！正确率：{correct_count}/{total} = {score:.2f}%", "success")
+                return redirect(url_for('exams.exam_main', exam_id=exam_id))
             
         else:
             # 保存答案：不计算分数，不标记完成
-            # 更新 restart_time 为当前时间（重置会话开始时间）
+            # 更新 restart_at 为当前时间（重置会话开始时间）
             c.execute('''
-                UPDATE exam_sessions 
-                SET answers = ?, duration = ?, restart_time = ?
+                UPDATE exams 
+                SET answers = ?, duration = ?, restart_at = ?
                 WHERE id = ?
             ''', (
                 json.dumps(new_answers),
@@ -236,69 +290,6 @@ def exam_main(exam_id):
                 'saved_answers': new_answers
             })
 
-@exams_bp.route('/exam')
-@login_required
-def show_exams():
-    """
-    显示用户的所有考试
-    找出所有对应用户id的考试，返回考试相关信息
-    """
-    user_id = get_user_id()
-    conn = get_db()
-    c = conn.cursor()
-    
-    c.execute('''
-        SELECT 
-            id,
-            question_ids,
-            answers,
-            start_time,
-            duration,
-            completed,
-            score,
-            json_array_length(question_ids) as question_count
-        FROM exam_sessions 
-        WHERE user_id = ?
-        ORDER BY start_time DESC
-    ''', (user_id,))
-    
-    exams = c.fetchall()
-    
-    # 格式化考试数据
-    exam_list = []
-    for exam in exams:
-        start_time = datetime.strptime(exam['start_time'], '%Y-%m-%d %H:%M:%S.%f')
-        exam_list.append({
-            'id': exam['id'],
-            'start_time': start_time.strftime('%Y-%m-%d %H:%M:%S'),
-            'duration': exam['duration'],
-            'completed': bool(exam['completed']),
-            'score': exam['score'],
-            'question_count': exam['question_count'],
-            'status': '已完成' if exam['completed'] else '进行中'
-        })
-    
-    # 计算统计数据
-    completed_exams = [e for e in exam_list if e['completed']]
-    unfinished_exams = [e for e in exam_list if not e['completed']]
-    
-    avg_score = 0
-    max_score = 0
-    if completed_exams:
-        scores = [e['score'] for e in completed_exams if e['score'] is not None]
-        if scores:
-            avg_score = sum(scores) / len(scores)
-            max_score = max(scores)
-    
-    recent_exams = completed_exams[:5]  # 最近5次已完成考试
-    
-    return render_template('exam_history.html', 
-                          exams=exam_list,
-                          recent_exams=recent_exams,
-                          avg_score=avg_score,
-                          max_score=max_score,
-                          unfinished_count=len(unfinished_exams))
-
 @exams_bp.route('/continue_exam/<int:exam_id>')
 @login_required
 def continue_exam(exam_id):
@@ -307,24 +298,35 @@ def continue_exam(exam_id):
     加载对应id的考试内容，返回已答题目答案，返回已用时间，
     重定向到main（/exam/<id>）
     """
+    # 检查是否为AJAX请求
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
+              request.headers.get('X-Ajax-Navigation') == 'true'
+
     user_id = get_user_id()
     conn = get_db()
     c = conn.cursor()
     
     # 获取考试记录
     c.execute('''
-        SELECT * FROM exam_sessions 
-        WHERE id = ? AND user_id = ? AND completed = 0
+        SELECT * FROM exams 
+        WHERE id = ? AND user_id = ? AND complete = 0
     ''', (exam_id, user_id))
     
     exam = c.fetchone()
-    
+
     if not exam:
-        flash("考试不存在、已完成或无权访问", "error")
-        return redirect(url_for('exams.show_exams'))
+        if is_ajax:
+            return jsonify({
+                'success': False,
+                'message': '考试不存在、已完成或无权访问',
+                'category': 'error'
+            }), 404
+        else:
+            flash("考试不存在、已完成或无权访问", "error")
+            return redirect(url_for('exams.exams_index'))
     
     # 计算已用时间
-    start_time = datetime.strptime(exam['start_time'], '%Y-%m-%d %H:%M:%S.%f')
+    start_time = datetime.strptime(exam['start_at'], '%Y-%m-%d %H:%M:%S.%f')
     current_time = datetime.now()
     elapsed_time = int((current_time - start_time).total_seconds())
     
@@ -338,8 +340,19 @@ def continue_exam(exam_id):
         'elapsed_time': elapsed_time
     }
     
-    # 重定向到考试主页面
-    return redirect(url_for('exams.exam_main', exam_id=exam_id))
+    if is_ajax:
+        # 返回JSON响应，指示导航到考试页面
+        return jsonify({
+            'success': True,
+            'message': '继续考试',
+            'category': 'info',
+            'redirect': url_for('exams.exam_main', exam_id=exam_id),
+            'ajax_navigate': True,
+            'exam_id': exam_id
+        })
+    else:
+        # 重定向到考试主页面
+        return redirect(url_for('exams.exam_main', exam_id=exam_id))
 
 @exams_bp.route('/exam/detail/<int:exam_id>')
 @login_required
@@ -355,12 +368,12 @@ def exam_detail(exam_id):
             id,
             question_ids,         -- 添加：题目ID列表
             answers,              -- 添加：答案列表
-            start_time,
+            start_at,
             duration,
-            completed,
+            complete,
             score,
             json_array_length(question_ids) as question_count
-        FROM exam_sessions 
+        FROM exams 
         WHERE id = ? AND user_id = ?
     ''', (exam_id, user_id))
     
@@ -386,7 +399,7 @@ def exam_detail(exam_id):
             # 检查answers是否存在
             answers = json.loads(exam['answers']) if exam['answers'] else []
             
-            if exam['completed'] and exam['score'] is not None:
+            if exam['complete'] and exam['score'] is not None:
                 for idx, qid in enumerate(question_ids):
                     q = fetch_question(qid)
                     if q:
@@ -441,10 +454,10 @@ def exam_detail(exam_id):
         "success": True,
         "exam": {
             "id": exam['id'],
-            "start_time": exam['start_time'],
+            "start_time": exam['start_at'],
             "duration": exam['duration'],
             "formatted_duration": formatted_duration,
-            "completed": bool(exam['completed']),
+            "completed": bool(exam['complete']),
             "score": exam['score'],
             "score_class": score_class,
             "question_count": exam['question_count'],
@@ -452,25 +465,106 @@ def exam_detail(exam_id):
         }
     })
 
-@exams_bp.route('/modes')
+@exams_bp.route('/exams', methods=['GET', 'POST'])
 @login_required
-def modes():
-    """Route to select quiz mode."""
+def exams_index():
+    """考试主页面 - 左侧开始考试，右侧考试历史"""
     user_id = get_user_id()
-    current_bank = get_current_bank(user_id)
-    
-    conn = get_db()
-    c = conn.cursor()
-    c.execute('SELECT COUNT(*) as total FROM questions WHERE bank_name = ?', (current_bank,))
-    total = c.fetchone()['total']
-    
-    # 获取最后一次未完成的考试
-    last_unfinished_exam = get_last_unfinished_exam(user_id)
-    last_exam_id = last_unfinished_exam['id'] if last_unfinished_exam else None
-    
-    return render_template('index.html', 
-                          mode_select=True, 
-                          current_year=datetime.now().year,
-                          current_bank=current_bank,
-                          total_questions=total,
-                          last_unfinished_exam_id=last_exam_id)
+
+    # 检查是否为AJAX请求
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
+              request.headers.get('X-Ajax-Navigation') == 'true'
+
+    if request.method == 'POST':
+        # 处理开始考试请求
+        question_count = int(request.form.get('question_count', 20))
+
+        # 获取当前题库并抽取题目
+        current_bank_result = get_current_bank_id(user_id)
+        if not current_bank_result or current_bank_result[0] is None:
+            if is_ajax:
+                return jsonify({
+                    'success': False,
+                    'message': '未找到可用题库',
+                    'category': 'error'
+                }), 400
+            else:
+                flash("未找到可用题库", "error")
+                return redirect(url_for('exams.exams_index'))
+        current_bank = current_bank_result[0]
+        question_ids = get_random_question_ids(question_count, user_id)
+
+        if not question_ids:
+            if is_ajax:
+                return jsonify({
+                    'success': False,
+                    'message': '当前题库中没有足够的题目',
+                    'category': 'error'
+                }), 400
+            else:
+                flash("当前题库中没有足够的题目", "error")
+                return redirect(url_for('exams.exams_index'))
+
+        # 初始化考试数据
+        start_time = datetime.now()
+        answers = []
+        elapsed_time = 0
+        completed = 0
+        score = 0.0
+
+        conn = get_db()
+        c = conn.cursor()
+
+        try:
+            c.execute('''
+                INSERT INTO exams
+                (user_id, question_ids, bank_id, start_at, restart_at, duration, answers, complete, score)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                user_id,
+                json.dumps(question_ids),
+                current_bank,
+                start_time,
+                start_time,
+                0,
+                json.dumps(answers),
+                completed,
+                score
+            ))
+            exam_id = c.lastrowid
+            conn.commit()
+            db_logger.info(f"[{os.getpid()}] Add exam: 用户{user_id}, ID{exam_id}")
+
+            if is_ajax:
+                # 返回JSON响应，指示导航到考试页面
+                return jsonify({
+                    'success': True,
+                    'message': '考试创建成功',
+                    'category': 'success',
+                    'redirect': url_for('exams.exam_main', exam_id=exam_id),
+                    'ajax_navigate': True,
+                    'exam_id': exam_id
+                })
+            else:
+                # 重定向到考试页面
+                return redirect(url_for('exams.exam_main', exam_id=exam_id))
+
+        except Exception as e:
+            conn.rollback()
+            if is_ajax:
+                return jsonify({
+                    'success': False,
+                    'message': f'启动考试失败: {str(e)}',
+                    'category': 'error'
+                }), 500
+            else:
+                flash(f"启动考试失败: {str(e)}", "error")
+                return redirect(url_for('exams.exams_index'))
+
+    # GET请求：显示考试主页
+    last_unfinished = get_last_unfinished_exam(user_id)
+    recent_exams = get_recent_exams(user_id, limit=8)
+
+    return render_template('exams.html',
+                          last_unfinished_exam=last_unfinished,
+                          recent_exams=recent_exams)

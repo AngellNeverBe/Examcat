@@ -3,50 +3,7 @@
 {% block title %}登录 | {{ config.TITLE }}{% endblock %}
 
 {% block content %}
-<div class="auth-container">
-    <div class="auth-logo">
-        <img src="../static/img/logo.webp" style="height: 96px; width: 96px"></img>
-    </div>
-    <h1 class="auth-title">登录 {{ config.TITLE }}</h1>
-    
-    <form method="post" class="auth-form">
-        <div class="form-group">
-            <label for="username" class="form-label">用户名</label>
-            <div class="input-group">
-                <span class="input-icon"><i class="fas fa-user"></i></span>
-                <input type="text" id="username" name="username" class="form-control" required autocomplete="username" placeholder="请输入用户名">
-            </div>
-        </div>
-        
-        <div class="form-group">
-            <label for="password" class="form-label">密码</label>
-            <div class="input-group">
-                <span class="input-icon"><i class="fas fa-lock"></i></span>
-                <input type="password" id="password" name="password" class="form-control" required autocomplete="current-password" placeholder="请输入密码">
-            </div>
-        </div>
-        
-        <button type="submit" class="btn btn-primary btn-block">
-            <i class="fas fa-sign-in-alt"></i> 登录
-        </button>
-    </form>
-    
-    <div class="auth-footer">
-        <p>还没有账号？ <a href="{{ url_for('auth.register') }}">立即注册</a></p>
-    </div>
-    
-    <!-- 页脚 -->
-    <footer style="text-align: center; margin-top: 2rem; color: var(--gray-600);">
-        <p class="footer-text">
-            &copy; 
-            <span id="copyright-year"></span> 
-            {{ config.TITLE }} 考试猫 | By <a href="https://github.com/AngellNeverBe" class="footer-link" target="_blank" rel="noopener noreferrer">paracat</a>
-            <br>
-            Powered By <a href="https://github.com/CiE-XinYuChen/EXAM-MASTER" class="footer-link" target="_blank" rel="noopener noreferrer">ExamMaster</a>
-        </p>
-    </footer>
-</div>
-
+    {% include '_partial/_login_form.html' %}
 {% endblock %}
 
 {% block styles %}
@@ -55,20 +12,4 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/login.js') }}"></script>
-<script>
-    (function() {
-        const currentYear = new Date().getFullYear();
-        const creationYear = 2026;
-        const yearSpan = document.getElementById('copyright-year');
-        
-        if (currentYear === creationYear) {
-        yearSpan.textContent = creationYear;
-        } else if (currentYear > creationYear) {
-        yearSpan.textContent = `${creationYear}-${currentYear}`;
-        } else {
-        // 如果当前年份小于创建年份（理论上不会发生）
-        yearSpan.textContent = creationYear;
-        }
-    })();
-</script>
 {% endblock %}

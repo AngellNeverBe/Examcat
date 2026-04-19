@@ -11,23 +11,27 @@
 
 /* pointer - 链接/可点击 */
 .cursor-pointer,
-[data-cursor="pointer"] {
+[data-cursor="pointer"],
+.move-card .tracker,
+.user-trigger i,
+.user-trigger span {
     cursor: url('/static/cursors/link.cur')8 0, pointer;
 }
 
 /* 链接 */
 a[href],
-area[href] {
-    cursor: url('/static/cursors/link.cur')8 0, pointer;
-}
-a i {
+area[href],
+a i,
+a img,
+a span {
     cursor: url('/static/cursors/link.cur')8 0, pointer;
 }
 
 /* 禁用状态 */
 :disabled,
 [disabled],
-[aria-disabled="true"] {
+[aria-disabled="true"],
+.btn.disabled {
     cursor: url('/static/cursors/unavailiable.cur'), not-allowed;
 }
 

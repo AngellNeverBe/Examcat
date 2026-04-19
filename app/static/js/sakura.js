@@ -7,7 +7,9 @@ img.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUgAAAEwCAYAAADVZeifAAA
 // 樱花数量 (添加)
 var sakuraNum = 50;
 // 樱花越界限制次数, -1不做限制,无限循环 (添加)
-var limitTimes = 2;
+var limitTimes = 5;
+// 飘落速度
+var speedFactor = 0.5; 
 
 // 定义限制数组 (添加)
 var limitArray = new Array(sakuraNum);
@@ -126,16 +128,16 @@ function getRandom(option) {
 		case 'r':
 			ret = Math.random() * 6;
 			break;
+		case 'fny':
+			random = (1.5 + Math.random() * 0.7) * speedFactor;
+			ret = function(x, y) {
+				return y + random;
+			};
+			break;
 		case 'fnx':
 			random = -0.5 + Math.random() * 1;
 			ret = function(x, y) {
-				return x + 0.5 * random - 1.7;
-			};
-			break;
-		case 'fny':
-			random = 1.5 + Math.random() * 0.7
-			ret = function(x, y) {
-				return y + random;
+				return x + (0.5 * random - 1.7) * speedFactor;
 			};
 			break;
 		case 'fnr':

@@ -1,0 +1,156 @@
+<div class="index-section"style="max-height: 720px;">
+    <div class="hero-section mb-1">
+        <!-- 随动卡片 --> 
+        <div class="move-card noselect">
+            <div class="move-card-canvas">
+                <div class="tracker tr-1"></div><div class="tracker tr-2"></div><div class="tracker tr-3"></div><div class="tracker tr-4"></div>
+                <div class="tracker tr-5"></div><div class="tracker tr-6"></div><div class="tracker tr-7"></div><div class="tracker tr-8"></div>
+                <div class="tracker tr-9"></div><div class="tracker tr-10"></div><div class="tracker tr-11"></div><div class="tracker tr-12"></div>
+                <div class="tracker tr-13"></div><div class="tracker tr-14"></div><div class="tracker tr-15"></div><div class="tracker tr-16"></div>
+                <div class="tracker tr-17"></div><div class="tracker tr-18"></div><div class="tracker tr-19"></div><div class="tracker tr-20"></div>
+                <div class="tracker tr-21"></div><div class="tracker tr-22"></div><div class="tracker tr-23"></div><div class="tracker tr-24"></div>
+                <div class="tracker tr-25"></div>
+
+                <div class="move-card-inner">
+                    <div class="hero-content text-center">
+                        <img src="{{ url_for('static', filename='img/logo.webp') }}"></img>
+                        <h1 class="display-title mb-0"> <span class="text-primary">{{ config.TITLE }}</span></h1>
+                    </div>            
+                </div>
+
+            </div>
+        </div>
+
+        <div class="flip-card">
+            <div class="flip-card-inner">
+                <!-- 正面 -->
+                <div class="flip-card-front">                
+                    <div class="countdown-carousel">
+                        <!-- 正常显示容器 -->
+                        <div id="countdownNormalView" class="countdown-info">
+                            <div class="countdown-info-left">
+                                <span>最近的考试</span>
+                                <span id="countdownCourse" style="display:inline-block;transition:opacity 0.28s;">...</span>
+                                <!-- <span>考试</span> -->
+                            </div>
+                            <div class="countdown-info-right">
+                                <span id="countdownDays" style="display:inline-block;transition:opacity 0.28s;">...</span>
+                                <span>天</span>
+                            </div>
+                        </div>
+                        <!-- 空状态容器（默认隐藏） -->
+                        <div id="countdownEmptyView" style="display:none;">✨ 暂无即将到来的考试</div>
+                        <!-- 下方提示（同样带动画） -->
+                        <div id="countdownHint">
+                            下一个 「 <span id="hintCourseName" style="display:inline-block;transition:opacity 0.28s;">...</span> 」
+                        </div>
+                    </div>
+                </div>
+                <!-- 反面 -->
+                <div class="flip-card-back">
+                    <div class="hitokoto-content text-center" id="hitokoto">     
+                            <p id="hitokoto-text">「 无月水上一孤舟，<br>无月水下葬离愁。 」</p>
+                            <p id="hitokoto-from">—— paracat</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-index">
+            <div class="hero-content text-center">
+                <div class="feature-buttons">
+                    {% if current_seq_qid %}
+                    <a href="{{ url_for('questions.show', qid=current_seq_qid, mode='sequential') }}" 
+                        class="ajax-nav-link btn btn-primary main-action-btn" 
+                        data-page="question">
+                        <i class="fas fa-list-ol"></i> 继续做题 (从第 {{ question.order }} 题开始)
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('questions.start', mode='sequential') }}" 
+                        class="ajax-nav-link btn btn-primary main-action-btn"
+                        data-page="question">
+                        <i class="fas fa-list-ol"></i> 开始做题
+                    </a>
+                    {% endif %}
+                    <a href="{{ url_for('questions.reset', bid=current_bid) }}" class="ajax-nav-link btn btn-warning main-action-btn">
+                        <i class="fas fa-redo"></i> 重置历史
+                    </a>
+                    <a href="{{ url_for('questions.start', mode='wrong') }}" 
+                        class="ajax-nav-link btn btn-danger main-action-btn"
+                        data-page="question">
+                        <i class="fas fa-file-medical-alt"></i> 错题练习
+                    </a>
+                    <a href="{{ url_for('questions.start', mode='sequential') }}" class="ajax-nav-link btn btn-info main-action-btn disabled">
+                        <i class="fas fa-search"></i> 搜索题目
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="advanced-section mb-1">
+        <!-- 题目导航卡片 -->
+        <div class="card card-mode question-navigation-card" style="min-height: 720px;">
+            <div class="card-header">
+                <i class="fas fa-bars"></i> 题目导航
+            </div>
+            <div class="card-body">
+                <!-- 题库名称 -->
+                <div class="bank-name-container">
+                    <h5 class="mt-1 mb-1">
+                        {% if bank %}
+                            当前题库 「 <span style="font-weight: 400;color: var(--gray-600);">{{ bank.bankname }}</span> 」
+                        {% else %}
+                            未选择题库
+                        {% endif %}
+                    </h5>
+                    <small class="text-muted">共 {{ question_stats.total|default(0) }} 题</small>
+                </div>
+                
+                <!-- 三色进度条 -->
+                <div class="bank-progress mb-1">
+                    <div class="progress-bar-stacked">
+                        <div class="progress-segment correct" 
+                             style="width: {{ question_stats.correct_total_percentage|default(0) }}%;" 
+                             title="正确: {{ question_stats.correct|default(0) }}题 ({{ question_stats.correct_total_percentage|default(0) }}%)"></div>
+                        <div class="progress-segment wrong" 
+                             style="width: {{ question_stats.wrong_total_percentage|default(0) }}%;" 
+                             title="错误: {{ question_stats.wrong|default(0) }}题 ({{ question_stats.wrong_total_percentage|default(0) }}%)"></div>
+                        <div class="progress-segment unanswered" 
+                             style="width: {{ question_stats.unanswered_percentage|default(100) }}%;" 
+                             title="未答: {{ question_stats.unanswered|default(0) }}题 ({{ question_stats.unanswered_percentage|default(100) }}%)"></div>
+                    </div>
+                    <div class="progress-labels d-flex justify-content-between mt-1">
+                        <small class="label-correct">正确 {{ question_stats.correct|default(0) }} 题</small>
+                        <small class="label-wrong">错误 {{ question_stats.wrong|default(0) }} 题</small>
+                        <small class="label-unanswered">未答 {{ question_stats.unanswered|default(0) }} 题</small>
+                    </div>
+                </div>
+                
+                <!-- 题目导航网格容器 -->
+                <div class="question-nav-container" style="height: 500px; overflow: auto; position: relative;">
+                    <div class="question-grid fade-in" id="questionGridAll">
+                        <!-- 所有题目导航格子将通过JavaScript动态生成 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 配置数据元素（隐藏） -->
+        <div id="questionNavConfig"
+             data-bank-id="{{ current_bid|default(0) }}"
+             data-total-questions="{{ question_stats.total|default(0) }}"
+             data-correct="{{ question_stats.correct|default(0) }}"
+             data-wrong="{{ question_stats.wrong|default(0) }}"
+             data-unanswered="{{ question_stats.unanswered|default(0) }}"
+             style="display: none;">
+        </div>
+        
+        <!-- JSON数据通过script标签传递 -->
+        <script id="questionDataScript" type="application/json">
+        {
+            "questionIdMapping": {{ question_id_mapping|default({})|tojson }},
+            "userQuestionStatus": {{ user_question_status|default({})|tojson }}
+        }
+        </script>
+    </div>
+</div>

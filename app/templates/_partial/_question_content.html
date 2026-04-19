@@ -1,0 +1,256 @@
+<!-- 进度条 -->
+<!-- {% if answered is not none and total is not none %}
+<div class="progress-container">
+    <div class="progress-header">
+        <span class="progress-title">答题进度</span>
+        <span class="progress-value">{{ answered }} / {{ total }} 题 ({{ (answered / total * 100)|round(1) if total else 0 }}%)</span>
+    </div>
+    <div class="progress-bar-container">
+        <div class="progress-bar" style="width: {{ (answered / total * 100) if total else 0 }}%;"></div>
+    </div>
+</div>
+{% endif %} -->
+
+{% if question %}
+<div class="question-container">
+    <h5 class="mt-1 mb-1">
+        当前题库 「 <span style="font-weight: 400;color: var(--gray-600);">{{ bank.bankname }}</span> 」
+    </h5>
+    <div class="question-header">        
+        <div class="question-info">
+            <span class="question-number">题 {{ question.order }}</span>
+            {% if mode=="sequential" %}
+                <span class="badge badge-secondary">刷题模式</span>
+            {% elif mode=="wrong" %}
+                <span class="badge badge-secondary">错题模式</span>
+            {% else %}
+                <span class="badge badge-secondary">其他模式</span>
+            {% endif %}
+            {% if question.type %}
+                <span class="badge badge-info">{{ question.type }}</span>
+            {% endif %}
+            {% if question.category %}
+                <span class="badge badge-primary">{{ question.category }}</span>
+            {% endif %}
+            {% if (completed or result_msg) and stats %}
+                <span class="question-stats">
+                    本题总共回答<span class="stats-number"> {{ stats.total_answered }} </span>次，
+                    正确<span class="stats-number"> {{ stats.total_correct }} </span>次，
+                    总正确率<span class="stats-accuracy 
+                        {% if stats.accuracy >= 80 %}text-success
+                        {% elif stats.accuracy >= 60 %}text-warning
+                        {% else %}text-danger
+                        {% endif %}">
+                        {{ stats.accuracy }}%
+                    </span>
+                </span>
+            {% endif %}
+        </div>
+        
+        <div class="question-actions-top">
+            <!-- 收藏按钮容器 -->
+            <div class="favorite-container">
+                <button class="favorite-btn {% if is_favorite %}active{% endif %}" 
+                        data-qid="{{ question.id }}" 
+                        data-action="{% if is_favorite %}remove{% else %}add{% endif %}">
+                    <i class="{% if is_favorite %}fas{% else %}far{% endif %} fa-star"></i> 
+                    {% if is_favorite %}已收藏{% else %}收藏本题{% endif %}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 题干内容 -->
+    <div class="question-stem">{{ question.stem }}</div>
+
+    <!-- 答题结果消息 -->
+    {% if completed or result_msg %}
+        {% if result_msg %}
+            <div class="result-message {% if '正确' in result_msg %}result-correct{% else %}result-incorrect{% endif %}">
+                {% if '正确' in result_msg %}
+                    <i class="fas fa-check-circle"></i>
+                {% else %}
+                    <i class="fas fa-times-circle"></i>
+                {% endif %}
+                {{ result_msg }}
+            </div>
+        {% elif completed %}
+            <div class="result-message {% if correct %}result-correct{% else %}result-incorrect{% endif %}">
+                {% if correct %}
+                    <i class="fas fa-check-circle"></i> 回答正确
+                {% else %}
+                    <i class="fas fa-times-circle"></i> 回答错误，正确答案：{{ question.answer }}
+                {% endif %}
+            </div>
+        {% endif %}
+    {% endif %}
+
+    <!-- 选项表单 -->
+    <form method="post" 
+        action="{{ url_for('questions.show', qid=question.id, mode=mode) }}" 
+        class="question-form">
+        <ul class="options-list">
+            {% for opt_key, opt_val in question.options.items() %}
+                {% if completed %}
+                    {# 已完成：根据用户答案标记选项 #}
+                    {% set user_selected = opt_key in user_answer %}
+                    {% set is_correct = opt_key in question.answer %}
+                {% else %}
+                    {# 未完成：不预选任何选项 #}
+                    {% set user_selected = false %}
+                    {% set is_correct = false %}
+                {% endif %}
+                
+                <li class="option-item">
+                    <label class="option-label 
+                        {% if completed %}
+                            {% if is_correct %}option-correct
+                            {% elif user_selected and not is_correct %}option-incorrect
+                            {% endif %}
+                        {% endif %}">
+                        
+                        {% if question.type == '单选题' %}
+                            <input type="radio" 
+                                    class="option-checkbox" 
+                                    name="answer"
+                                    value="{{ opt_key }}"
+                                    {% if user_selected %}checked{% endif %}
+                                    {% if completed %}disabled{% endif %}
+                                    {% if not completed %}required{% endif %}>
+                        {% else %}
+                            <input type="checkbox" 
+                                    class="option-checkbox" 
+                                    name="answer"
+                                    value="{{ opt_key }}"
+                                    {% if user_selected %}checked{% endif %}
+                                    {% if completed %}disabled{% endif %}>
+                        {% endif %}
+                        <span class="option-text"><strong>{{ opt_key }}.</strong> {{ opt_val }}</span>
+                    </label>
+                </li>
+            {% endfor %}
+        </ul>
+        
+        <!-- 底部操作按钮 -->
+        <div class="question-actions">
+            {% if not completed %}
+                <!-- 未完成：显示提交按钮 -->
+                <div class="btn-group">
+                    {% if prev_qid %}
+                        <a href="{{ url_for('questions.show', qid=prev_qid, mode=mode) }}" 
+                           class="ajax-nav-link btn btn-primary" data-page="question">
+                            上一题
+                        </a>
+                    {% endif %}
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-paper-plane"></i> 提交答案
+                    </button>
+                </div>
+            {% else %}
+                <!-- 已完成：显示导航按钮 -->
+                <div class="btn-group">
+                    {% if prev_qid %}
+                        <a href="{{ url_for('questions.show', qid=prev_qid, mode=mode) }}" 
+                           class="ajax-nav-link btn btn-primary" data-page="question">
+                            上一题
+                        </a>
+                    {% endif %}
+                    
+                    {% if next_qid %}
+                        <a href="{{ url_for('questions.show', qid=next_qid, mode=mode) }}" 
+                           class="ajax-nav-link btn btn-primary" data-page="question">
+                            下一题
+                        </a>
+                    {% else %}
+                        {% if mode=="sequential" %}
+                            <a href="{{ url_for('ajax.ajax_page', page_name='index') }}"
+                                class="ajax-nav-link btn btn-primary"
+                                data-page="index">
+                                <i class="fas fa-home"></i> 返回首页
+                            </a>
+                            <!-- <button class="btn btn-success" id="confetti-button">🎉 庆祝！</button> -->
+
+                        {% else %}
+                            <a href="{{ url_for('ajax.ajax_page', page_name='index') }}"
+                                class="ajax-nav-link btn btn-primary"
+                                data-page="index">
+                                <i class="fas fa-home"></i> 返回首页
+                            </a>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </form>
+    
+    <!-- Artalk 评论区（提前加载但隐藏，答题后显示） -->
+    <div id="artalk-section" class="artalk-section" style="display: none;">
+        <h4 class="mb-1 mt-2">
+            <i class="fas fa-comments mr-2"></i>题目讨论
+            <small class="text-muted ml-2">共 <span class="artalk-comment-count">0</span> 条评论</small>
+        </h4>
+        <div id="Comments" data-page-key="{{ question.id }}" data-page-title="题目 {{ question.id }} | {{ config.TITLE }}"></div>
+    </div>
+    
+    {% if completed %}
+    <script>
+        // 答题完成后显示评论区
+        document.addEventListener('DOMContentLoaded', function() {
+            const artalkSection = document.getElementById('artalk-section');
+            if (artalkSection) {
+                artalkSection.style.display = 'block';
+                
+                // 如果ArtalkManager已加载，初始化评论区
+                if (window.ArtalkManager && window.ArtalkManager.isArtalkEnabled()) {
+                    const commentsContainer = document.getElementById('Comments');
+                    if (commentsContainer) {
+                        const pageKey = commentsContainer.getAttribute('data-page-key');
+                        const pageTitle = commentsContainer.getAttribute('data-page-title') || document.title;
+                        window.ArtalkManager.showComments(pageKey, pageTitle);
+                    }
+                }
+            }
+        });
+    </script>
+    {% endif %}
+</div>
+
+{% else %}
+{% block confetti %}<div id="confetti-container"></div>{% endblock %}
+<!-- 题库做完 -->
+<div class="card text-center py-5">
+    <div class="empty-state">
+        <i class="fas fa-check-circle" style="font-size: 4rem; color: var(--success-color); margin-bottom: 1.5rem;"></i>
+        <h2 class="mb-3">恭喜！您已经回答了所有题目</h2>
+        <p class="mb-4">练习辛苦啦！休息一下吧~</p>
+        <div class="confetti d-flex gap-2 justify-content-center flex-wrap mt-3 mb-3">
+            
+        </div>
+        <div class="d-flex gap-2 justify-content-center flex-wrap">
+            <button class="btn btn-success" id="confetti-button">🎉 庆祝！</button>
+            <a href="{{ url_for('questions.show', qid=current_seq_qid, mode='sequential') }}" 
+                class="ajax-nav-link btn btn-outline-primary" 
+                data-page="question">
+                <i class="fas fa-list-ol"></i> 从头刷题
+            </a>
+            <a href="{{ url_for('questions.start', mode='wrong') }}" 
+                class="ajax-nav-link btn btn-danger"
+                data-page="question">
+                <i class="fas fa-file-medical-alt"></i> 错题练习
+            </a>
+            <a href="{{ url_for('ajax.ajax_page', page_name='index') }}"
+                class="ajax-nav-link btn btn-primary"
+                data-page="index">
+                <i class="fas fa-home"></i> 首页
+            </a>
+        </div>
+        <!-- <div class="d-flex gap-2 justify-content-center flex-wrap mt-3"></div>
+            <form method="post" action="{{ url_for('main.reset_history') }}">
+                <button type="submit" class="btn btn-danger" onclick="return confirm('确定要重置答题历史吗？此操作不可恢复。')">
+                    <i class="fas fa-redo"></i> 重置答题历史(包括错题！)
+                </button>
+            </form>
+        </div> -->
+    </div>
+</div>
+{% endif %}
