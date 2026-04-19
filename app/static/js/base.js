@@ -2,12 +2,21 @@
 
 document.addEventListener('DOMContentLoaded', function() {
     // 初始化所有基础功能
+    initAjax();
     initMobileMenu();
     initFlashMessages();
     initNotransFlashMessages();
     initTableFeatures();
     initDeviceDetection();
+    initNav();
+    initUserBar();
 });
+/**
+ * 初始化Ajax管理内容区域
+ */
+function initAjax() {
+    window.ajaxNavigator = new AjaxNavigator();
+}
 
 /**
  * 初始化移动端菜单功能
@@ -322,5 +331,350 @@ function initTableFeatures() {
                 }
             });
         });
+    });
+}
+
+function initNav() {
+    // ======== 导航栏 ========
+    const nav = document.querySelector('nav');
+  
+    // 滚动相关变量
+    let lastScrollTop = 0;
+    let isScrollingDown = false;
+    let scrollTimeout;
+    const SCROLL_THRESHOLD = 30; // 滚动阈值，避免微小滚动触发
+    const TOP_THRESHOLD = 10; // 页面顶部阈值
+    
+    // 节流函数，优化滚动性能
+    function throttle(func, wait) {
+        let timeout = null;
+        let previous = 0;
+        
+        return function() {
+        const now = Date.now();
+        const remaining = wait - (now - previous);
+        const context = this;
+        const args = arguments;
+        
+        if (remaining <= 0 || remaining > wait) {
+            if (timeout) {
+            clearTimeout(timeout);
+            timeout = null;
+            }
+            previous = now;
+            func.apply(context, args);
+        } else if (!timeout) {
+            timeout = setTimeout(function() {
+            previous = Date.now();
+            timeout = null;
+            func.apply(context, args);
+            }, remaining);
+        }
+        };
+    }
+    
+    // 更新导航栏状态
+    function updateNavbar() {
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const isAtTop = scrollTop <= TOP_THRESHOLD;
+        
+        // 判断滚动方向
+        isScrollingDown = scrollTop > lastScrollTop;
+        lastScrollTop = scrollTop;
+        
+        // 清除之前的定时器
+        clearTimeout(scrollTimeout);
+        
+        // 如果在页面顶部
+        if (isAtTop) {
+        nav.classList.add('nav-transparent');
+        nav.classList.remove('nav-solid', 'nav-hidden');
+        return;
+        }
+        
+        // 不在页面顶部
+        nav.classList.remove('nav-transparent');
+        nav.classList.add('nav-solid');
+        
+        // 向下滚动：隐藏导航栏
+        if (isScrollingDown && scrollTop > SCROLL_THRESHOLD) {
+        nav.classList.add('nav-hidden');
+        nav.classList.remove('nav-visible');
+        }
+        // 向上滚动：显示导航栏
+        else {
+        nav.classList.remove('nav-hidden');
+        nav.classList.add('nav-visible');
+        }
+        
+        // 设置定时器，当停止滚动一段时间后，确保导航栏保持显示
+        scrollTimeout = setTimeout(function() {
+        if (!isScrollingDown && !isAtTop) {
+            nav.classList.remove('nav-hidden');
+            nav.classList.add('nav-visible');
+        }
+        }, 150);
+    }
+    
+    // 添加滚动监听（使用节流优化）
+    window.addEventListener('scroll', throttle(updateNavbar, 100));
+    
+    // 初始加载时更新一次状态
+    updateNavbar();
+    
+    // 页面加载时添加过渡类（避免初始加载时的动画）
+    setTimeout(function() {
+        nav.style.transition = 'all 0.3s ease';
+    }, 100);
+    
+    // 窗口大小变化时重新计算
+    window.addEventListener('resize', function() {
+        lastScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        updateNavbar();
+    });
+}
+
+function initUserBar() {
+    let hoverTimeout = null;
+    let isHoverEnabled = true; // 控制悬停功能是否启用
+    let isFixed = false; // 记录菜单是否被点击固定
+    let isMouseInDropdown = false; // 记录鼠标是否在下拉菜单内
+    
+    // 检查下拉菜单是否可见
+    function isDropdownVisible() {
+        const dropdownContent = document.querySelector('.dropdown-content');
+        return dropdownContent && dropdownContent.style.opacity === '1';
+    }
+    
+    // 显示下拉菜单
+    function showDropdown() {
+        const dropdownContent = document.querySelector('.dropdown-content');
+        const userTrigger = document.querySelector('.user-trigger');
+        
+        if (!dropdownContent || !userTrigger) return;
+        
+        dropdownContent.style.opacity = '1';
+        dropdownContent.style.visibility = 'visible';
+        dropdownContent.style.transform = 'translateY(0)';
+        userTrigger.setAttribute('aria-expanded', 'true');
+        
+        // 聚焦到第一个可聚焦元素
+        const firstItem = dropdownContent.querySelector('.dropdown-item');
+        if (firstItem) {
+            setTimeout(() => firstItem.focus(), 100);
+        }
+    }
+    
+    // 隐藏下拉菜单
+    function hideDropdown() {
+        const dropdownContent = document.querySelector('.dropdown-content');
+        const userTrigger = document.querySelector('.user-trigger');
+        
+        if (!dropdownContent || !userTrigger) return;
+        
+        dropdownContent.style.opacity = '0';
+        dropdownContent.style.visibility = 'hidden';
+        dropdownContent.style.transform = 'translateY(-10px)';
+        userTrigger.setAttribute('aria-expanded', 'false');
+        userTrigger.focus();
+    }
+    
+    // 点击按钮：切换固定状态
+    document.addEventListener('click', function(e) {
+        const userTrigger = e.target.closest('.user-trigger');
+        const dropdownContent = document.querySelector('.dropdown-content');
+        
+        if (userTrigger) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (isFixed) {
+                // 如果已经固定，取消固定并隐藏
+                hideDropdown();
+                isFixed = false;
+                isHoverEnabled = true; // 立即恢复悬停功能
+                clearTimeout(hoverTimeout);
+            } else {
+                // 如果未固定，固定菜单
+                if (!isDropdownVisible()) {
+                    showDropdown(); // 如果菜单不可见，先显示
+                } else {
+                    // 如果菜单已经显示（可能是悬停显示的），确保它完全显示
+                    showDropdown();
+                }
+                
+                isFixed = true;
+                isHoverEnabled = false; // 点击固定后暂时禁用悬停
+                
+                // 5秒后恢复悬停功能
+                setTimeout(() => {
+                    if (isFixed) { // 检查是否仍然固定
+                        isHoverEnabled = true;
+                    }
+                }, 5000);
+            }
+        }
+        // 点击下拉菜单内部：保持显示
+        else if (e.target.closest('.dropdown-content')) {
+            // 点击菜单内部，保持显示状态
+            isMouseInDropdown = true;
+            return;
+        }
+        // 点击其他地方：关闭下拉菜单并取消固定
+        else {
+            if (isDropdownVisible()) {
+                hideDropdown();
+                isFixed = false;
+                isHoverEnabled = true; // 恢复悬停功能
+                clearTimeout(hoverTimeout);
+            }
+            isMouseInDropdown = false;
+        }
+    });
+    
+    // 鼠标悬停事件
+    document.addEventListener('mouseover', function(e) {
+        if (!isHoverEnabled || isFixed) return;
+        
+        const userTrigger = e.target.closest('.user-trigger');
+        const dropdownContent = document.querySelector('.dropdown-content');
+        
+        if (userTrigger) {
+            // 鼠标进入按钮，显示下拉菜单
+            clearTimeout(hoverTimeout);
+            hoverTimeout = setTimeout(() => {
+                if (!isDropdownVisible() && !isFixed) {
+                    showDropdown();
+                }
+            }, 150);
+        }
+        // 鼠标进入下拉菜单本身
+        else if (e.target.closest('.dropdown-content')) {
+            clearTimeout(hoverTimeout);
+            isMouseInDropdown = true;
+        }
+    });
+    
+    // 鼠标离开事件
+    document.addEventListener('mouseout', function(e) {
+        if (!isHoverEnabled || isFixed) return;
+        
+        const userTrigger = e.target.closest('.user-trigger');
+        const dropdownContent = document.querySelector('.dropdown-content');
+        const relatedTarget = e.relatedTarget;
+        
+        // 检查鼠标是否真的离开了用户菜单区域
+        const leftUserArea = !userTrigger && 
+                            (!relatedTarget || 
+                             (!relatedTarget.closest('.user-trigger') && 
+                              !relatedTarget.closest('.dropdown-content')));
+        
+        const leftDropdownArea = e.target.closest('.dropdown-content') && 
+                                (!relatedTarget || 
+                                 (!relatedTarget.closest('.user-trigger') && 
+                                  !relatedTarget.closest('.dropdown-content')));
+        
+        if (leftUserArea || leftDropdownArea) {
+            isMouseInDropdown = false;
+            clearTimeout(hoverTimeout);
+            hoverTimeout = setTimeout(() => {
+                if (isDropdownVisible() && !isFixed && !isMouseInDropdown) {
+                    hideDropdown();
+                }
+            }, 150);
+        }
+    });
+    
+    // 键盘导航支持
+    document.addEventListener('keydown', function(e) {
+        const userTrigger = document.querySelector('.user-trigger');
+        const dropdownContent = document.querySelector('.dropdown-content');
+        
+        if (!userTrigger || !dropdownContent) return;
+        
+        // 只有当用户触发按钮聚焦时才处理键盘事件
+        if (document.activeElement === userTrigger || userTrigger.contains(document.activeElement)) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                
+                if (isFixed) {
+                    hideDropdown();
+                    isFixed = false;
+                    isHoverEnabled = true;
+                } else {
+                    if (!isDropdownVisible()) {
+                        showDropdown();
+                    }
+                    isFixed = true;
+                    isHoverEnabled = false;
+                    
+                    setTimeout(() => {
+                        if (isFixed) {
+                            isHoverEnabled = true;
+                        }
+                    }, 5000);
+                }
+            } else if (e.key === 'Escape') {
+                hideDropdown();
+                isFixed = false;
+                isHoverEnabled = true;
+            }
+        }
+        
+        // 下拉菜单内的键盘导航
+        if (dropdownContent.style.opacity === '1') {
+            const items = dropdownContent.querySelectorAll('.dropdown-item');
+            const currentIndex = Array.from(items).indexOf(document.activeElement);
+            
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                const nextIndex = (currentIndex + 1) % items.length;
+                if (items[nextIndex]) {
+                    items[nextIndex].focus();
+                }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                const prevIndex = (currentIndex - 1 + items.length) % items.length;
+                if (items[prevIndex]) {
+                    items[prevIndex].focus();
+                }
+            }
+        }
+    });
+    
+    // 无障碍性改进
+    function setupAccessibility() {
+        const userTrigger = document.querySelector('.user-trigger');
+        const dropdownContent = document.querySelector('.dropdown-content');
+        
+        if (userTrigger) {
+            userTrigger.setAttribute('role', 'button');
+            userTrigger.setAttribute('aria-haspopup', 'true');
+            userTrigger.setAttribute('aria-expanded', 'false');
+            userTrigger.setAttribute('tabindex', '0');
+        }
+        
+        if (dropdownContent) {
+            dropdownContent.setAttribute('role', 'menu');
+            dropdownContent.querySelectorAll('.dropdown-item').forEach(item => {
+                item.setAttribute('role', 'menuitem');
+                item.setAttribute('tabindex', '-1');
+            });
+        }
+    }
+    
+    // 初始设置无障碍性
+    setupAccessibility();
+    
+    // 监听AJAX页面更新事件
+    window.addEventListener('ajax:page:updated', function() {
+        // 重置状态
+        isFixed = false;
+        isHoverEnabled = true;
+        isMouseInDropdown = false;
+        clearTimeout(hoverTimeout);
+        
+        // 重新设置无障碍性
+        setTimeout(setupAccessibility, 100);
     });
 }

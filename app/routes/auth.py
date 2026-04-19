@@ -1,11 +1,14 @@
 """
-examcat - 认证路由蓝图
+examcat - 认证&用户路由蓝图
 """
 import os
-from flask import Blueprint, render_template, request, session, redirect, url_for, flash
+from flask import Blueprint, render_template, request, session, redirect, url_for, flash, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
-from ..utils.database import get_db, get_first_bank, load_questions_to_db, setup_db_logger, db_logger
-from ..utils.auth import login_required, is_logged_in, get_user_id, admin_required, verify_admin_credentials, is_admin, ADMIN_CREDENTIALS
+from ..utils.database import get_db, db_logger
+from ..utils.auth import validate_username, validate_email, validate_passward, verify_admin_credentials, ADMIN_CREDENTIALS, login_required
+from ..utils.banks import get_current_bank_id
+from ..utils.page_data import get_user_data
+from ..utils.database import get_db, db_logger
 
 auth_bp = Blueprint('auth', __name__, template_folder='../templates/base_auth')
 
@@ -14,52 +17,55 @@ def register():
     """Route for user registration."""
     if request.method == 'POST':
         username = request.form.get('username')
+        email = request.form.get('email')
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
+
+        verify_username = validate_username(username)
+        verify_email = validate_email(email)
+        verify_passward = validate_passward(password, confirm_password)
+
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+        if not verify_username[0]:
+            if is_ajax:
+                return jsonify({'success': verify_username[0], 'message': verify_username[1]})
+            flash(verify_username[1], "error")
+            return render_template('register.html')
+
+        if not verify_email[0]:
+            if is_ajax:
+                return jsonify({'success': verify_email[0], 'message': verify_email[1]})
+            flash(verify_email[1], "error")
+            return render_template('register.html')
         
-        # 检查是否尝试注册管理员账号
-        if username == 'admin':
-            flash("不能注册管理员账号", "error")
-            return render_template('register.html')
-            
-        # Input validation
-        if not username or not password:
-            flash("用户名和密码不能为空", "error")
-            return render_template('register.html')
-            
-        if password != confirm_password:
-            flash("两次输入的密码不一致", "error")
-            return render_template('register.html')
-            
-        if len(password) < 6:
-            flash("密码长度不能少于6个字符", "error")
+        if not verify_passward[0]:
+            if is_ajax:
+                return jsonify({'success': verify_passward[0], 'message': verify_passward[1]})
+            flash(verify_passward[1], "error")
             return render_template('register.html')
         
         conn = get_db()
         c = conn.cursor()
-        
-        # Check if username exists
-        c.execute('SELECT id FROM users WHERE username=?', (username,))
-        if c.fetchone():
-            
-            flash("用户名已存在，请更换用户名", "error")
-            return render_template('register.html')
-        
-        # Get first available bank
-        first_bank = get_first_bank()
-        if not first_bank:
-            first_bank = 'questions.csv'
-        
-        # Create new user
         password_hash = generate_password_hash(password)
-        c.execute('INSERT INTO users (username, password_hash, current_bank) VALUES (?,?,?)', 
-                  (username, password_hash, first_bank))
+        c.execute('INSERT INTO users (username, email, password_hash) VALUES (?,?,?)', 
+                  (username, email, password_hash))
         conn.commit()
         db_logger.info(f"[{os.getpid()}] register: 用户{username}")
         
-        flash("注册成功，请登录", "success")
-        return redirect(url_for('auth.login'))
+        if is_ajax:
+            # AJAX请求：返回JSON响应
+            return jsonify({
+                'success': True,
+                'message': '注册成功，请登录',
+                'redirect_url': url_for('ajax.ajax_page', page_name='login')
+            })
+        else:
+            # 传统请求：保持原有行为
+            flash("注册成功，请登录", "success")
+            return redirect(url_for('auth.login'))
         
+    # GET请求：渲染注册页面
     return render_template('register.html')
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
@@ -69,117 +75,92 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        
         if not username or not password:
+            if is_ajax:
+                return jsonify({'success': False, 'message': '用户名和密码不能为空'})
             flash("用户名和密码不能为空", "error")
             return render_template('login.html')
         
-        # 首先尝试管理员登录
+        # ============= 管理员登录 ==============
         if verify_admin_credentials(username, password):
 
             conn = get_db()
             c = conn.cursor()
             # Check if username exists
-            c.execute('SELECT id FROM users WHERE username=?', (username,))
+            c.execute('SELECT id, email FROM users WHERE username=?', (username,))
             user = c.fetchone()
             if not user:
-                # Get first available bank
-                first_bank = get_first_bank()
-                if not first_bank:
-                    first_bank = 'questions.csv'
-                c.execute('INSERT INTO users (username, password_hash, current_bank) VALUES (?,?,?)', 
-                        (username, ADMIN_CREDENTIALS[username], first_bank))
+                c.execute('INSERT INTO users (username, email, password_hash) VALUES (?,?,?)', 
+                        (username, '', ADMIN_CREDENTIALS[username]))
                 conn.commit()
                 flash("管理员第一次登录，信息已记录，请重新登录", "success")
                 
                 return redirect(url_for('auth.login'))
             
-            print(user['id'])
             session['user_id'] = user['id']
-            session['is_admin'] = True            
+            session['username'] = username
+            session['email'] = user['email'] if user['email'] else '未设置'
+            session['is_admin'] = True
 
-            # Ensure the user has a current_bank set
-            c.execute('SELECT current_bank FROM users WHERE id = ?', (user['id'],))
-            current_bank_row = c.fetchone()
-            
-            if not current_bank_row or not current_bank_row['current_bank']:
-                # Set first available bank for existing users
-                first_bank = get_first_bank()
-                if first_bank:
-                    c.execute('UPDATE users SET current_bank = ? WHERE id = ?', 
-                             (first_bank, user['id']))
-                else:
-                    c.execute('UPDATE users SET current_bank = ? WHERE id = ?', 
-                             ('questions.csv', user['id']))
-                conn.commit()
-                current_bank = first_bank if first_bank else 'questions.csv'
+            if is_ajax:
+                return jsonify({
+                    'success': True,
+                    'message': f'欢迎，{username} !',
+                    'redirect_url': url_for('main.index')
+                })
             else:
-                current_bank = current_bank_row['current_bank']
-            
-            # Check if questions exist for this bank, if not load them
-            c.execute('SELECT COUNT(*) as cnt FROM questions WHERE bank_name = ?', (current_bank,))
-            if c.fetchone()['cnt'] == 0:
-                load_questions_to_db(conn, current_bank)
-
-            flash(f"欢迎，{username} !", "success")
-            db_logger.info(f"[{os.getpid()}] login: 管理员{username}")
-
-            # Redirect to 'next' parameter if provided
-            next_page = request.args.get('next')
-            if next_page and next_page.startswith('/'):
-                return redirect(next_page)
-            return redirect(url_for('main.index'))
+                flash(f"欢迎，{username} !", "success")
+                return redirect(url_for('main.index'))
         
-        # 如果不是管理员，尝试普通用户登录
+        # ============= 普通用户登录 ==============
         conn = get_db()
         c = conn.cursor()
-        c.execute('SELECT id, password_hash FROM users WHERE username=?', (username,))
+        c.execute('SELECT id, email, password_hash FROM users WHERE username=?', (username,))
         user = c.fetchone()
         
         if user and check_password_hash(user['password_hash'], password):
             session['user_id'] = user['id']
-            session['is_admin'] = False  # 明确设置为普通用户
-            
-            # Ensure the user has a current_bank set
-            c.execute('SELECT current_bank FROM users WHERE id = ?', (user['id'],))
-            current_bank_row = c.fetchone()
-            
-            if not current_bank_row or not current_bank_row['current_bank']:
-                # Set first available bank for existing users
-                first_bank = get_first_bank()
-                if first_bank:
-                    c.execute('UPDATE users SET current_bank = ? WHERE id = ?', 
-                             (first_bank, user['id']))
-                else:
-                    c.execute('UPDATE users SET current_bank = ? WHERE id = ?', 
-                             ('questions.csv', user['id']))
-                conn.commit()
-                current_bank = first_bank if first_bank else 'questions.csv'
+            session['username'] = username
+            session['email'] = user['email'] if user['email'] else '未设置'
+            session['is_admin'] = False
+                        
+            if is_ajax:
+                return jsonify({
+                    'success': True,
+                    'message': f'欢迎，{username}！',
+                    'redirect_url': url_for('main.index')
+                })
             else:
-                current_bank = current_bank_row['current_bank']
-            
-            # Check if questions exist for this bank, if not load them
-            c.execute('SELECT COUNT(*) as cnt FROM questions WHERE bank_name = ?', (current_bank,))
-            if c.fetchone()['cnt'] == 0:
-                load_questions_to_db(conn, current_bank)
-            
-            flash(f"欢迎，{username} !", "success")
-            db_logger.info(f"[{os.getpid()}] login: 用户{username}")
-            
-            # Redirect to 'next' parameter if provided
-            next_page = request.args.get('next')
-            if next_page and next_page.startswith('/'):
-                return redirect(next_page)
-                
-            return redirect(url_for('main.index'))
+                flash(f"欢迎，{username}！", "success")
+                return redirect(url_for('main.index'))
         else:
-            flash("登录失败，用户名或密码错误", "error")
-            
+            # 登录失败的处理
+            if is_ajax:
+                return jsonify({'success': False, 'message': '登录失败，用户名或密码错误'})
+            else:
+                flash("登录失败，用户名或密码错误", "error")
+                
+    # GET请求：渲染登录页面
     return render_template('login.html')
 
 @auth_bp.route('/logout')
 def logout():
     """Route for user logout."""
-    user_type = "管理员" if is_admin() else "用户"
     session.clear()
-    flash(f"{user_type}已成功退出登录", "success")
+    flash("您已成功退出登录", "success")
     return redirect(url_for('auth.login'))
+
+
+@auth_bp.route('/user')
+@login_required
+def user_index():
+    """用户个人资料页面"""
+    user_id = session['user_id']
+    
+    # 使用统一的用户数据获取函数
+    data = get_user_data(user_id)
+    
+    # 渲染用户页面模板，传递所有数据
+    return render_template('base/user.html', **data)

@@ -14,7 +14,7 @@ class Config:
 
     """个性化配置"""
     TITLE = 'Examcat'
-    CARD_INFO = 'Examcat 1.4 版本前瞻！修复了不能重新刷题的bug，并修改了部分问题题目！<br><font color="red">如果有发现任何bug或题目错误，欢迎联系我(2687869894@qq.com)！</font><br>如果觉得加载速度比较慢，可以试试备用线路 <a href="http://examcatbak.paraisland.top:32222/" class="footer-link" target="_blank" rel="noopener noreferrer">Examcatbak</a> 或者使用代理~<br>欢迎您提出宝贵的意见！这里是俺的 <a href="https://blog.paraisland.top" class="footer-link" target="_blank" rel="noopener noreferrer">blog</a> 和 <a href="https://github.com/AngellNeverBe" class="footer-link" target="_blank" rel="noopener noreferrer">GitHub</a>，欢迎参观！'
+    CARD_INFO = 'Examcat 正在准备一个大更新！不保证3.22以后的数据安全！预计：<br><font color="red">1.重构项目代码，增加浏览速度，优化UI设计</font><br>2.修复不能返回上一题的问题<br>3.修复被医综伤到的心 T_T'
     
     """ Artalk """
     ARTALK_ENABLED = True                             # 是否启用 Artalk

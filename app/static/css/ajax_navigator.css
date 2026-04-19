@@ -1,0 +1,84 @@
+/* AJAX导航相关样式 */
+
+/* 加载状态 */
+.ajax-loading {
+    /* position: relative;
+    min-height: 200px; */
+}
+
+.ajax-loading::before {
+    /* content: '';
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid var(--primary-color, #3498db);
+    border-radius: 50%;
+    animation: ajax-spin 1s linear infinite;
+    z-index: 1000; */
+}
+
+.ajax-loading::after {
+    /* content: '加载中...';
+    position: fixed;
+    top: calc(50% + 30px);
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--gray-600, #666);
+    font-size: 0.875rem;
+    z-index: 1000;
+    white-space: nowrap; */
+}
+
+@keyframes ajax-spin {
+    /* 0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); } */
+}
+
+/* 错误状态 */
+.ajax-error {
+    position: relative;
+}
+
+.ajax-error-message {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    animation: ajax-fade-in 0.3s ease;
+}
+
+@keyframes ajax-fade-in {
+    from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* 内容区域过渡动画 */
+#ajax-content {
+    transition: opacity 0.3s ease;
+}
+
+/* AJAX导航链接样式 */
+/* .ajax-nav-link {
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.ajax-nav-link:hover {
+    color: var(--primary-color, #3498db);
+    text-decoration: underline;
+} */
+
+/* 防止内容闪烁 */
+#ajax-content > * {
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.ajax-loading #ajax-content > * {
+    opacity: 0.3;
+}

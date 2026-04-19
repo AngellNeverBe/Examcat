@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block title %}个人 | {{ config.TITLE }}{% endblock %}
+
+{% block content %}
+    {% include '_partial/_profile_content.html' %}
+{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/user.css') }}">
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/user.js') }}"></script>
+{% endblock %}

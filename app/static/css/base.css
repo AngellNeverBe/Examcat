@@ -1,4 +1,283 @@
 /* base.css - Base template 样式 */
+/* ====== 顶部导航栏 ====== */
+/* 1. 基础导航栏样式 */
+nav {
+  /* 布局属性 */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 1000;  
+  /* 盒模型属性 */
+  padding: 0.5rem 1.5rem;  
+  /* 视觉属性 */
+  background-color: #fff;
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);  
+  /* 过渡效果 */
+  transition: 
+    background-color 0.3s ease,
+    box-shadow 0.3s ease,
+    transform 0.3s ease;  
+  /* 优化性能 */
+  will-change: transform, background-color, box-shadow;
+}
+
+/* 2. 导航侧边区域 */
+.nav-left {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  /* 间距 */
+  margin-right: 2rem;
+}
+.nav-right {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  /* 间距 */
+  margin-left: 2rem;
+}
+.nav-logo {
+  /* 布局属性 */
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;  
+  /* 文本属性 */
+  color: var(--primary-color, #2563eb);
+  font-family: 'youth';
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-decoration: none;  
+}
+.nav-logo img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+/* 3. 导航链接容器 */
+.nav-links {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  width: 100%;
+}
+/* 4. 单个导航链接 */
+.nav-link {
+  /* 布局属性 */
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: var(--border-radius, 6px);  
+  /* 文本属性 */
+  color: var(--gray-700, #374151);
+  font-size: 0.875rem; /* 14px */
+  font-weight: 400;
+  text-decoration: none;  
+  /* 过渡效果 */
+  transition: var(--transition, all 0.3s ease);
+}
+/* 5. 链接交互状态 */
+.nav-link:hover {
+  background-color: var(--gray-100, #f3f4f6);
+  color: var(--primary-color, #2563eb);
+}
+.nav-link.active {
+  background-color: var(--bg-color, #f8fafc);
+  color: var(--primary-color, #2563eb);
+  font-weight: 400;
+}
+/* ====== 导航栏滚动效果 ====== */
+/* 导航栏透明状态 (在页面顶部时) */
+nav.nav-transparent {
+  background-color: transparent;
+  box-shadow: none;
+}
+/* 导航栏隐藏状态 (向下滚动时) */
+nav.nav-hidden {
+  transform: translateY(-100%);
+  box-shadow: none;
+}
+/* 导航栏显示状态 (向上滚动时) */
+nav.nav-visible {
+  transform: translateY(0);
+}
+/* 滚动后的不透明背景 */
+nav.nav-solid {
+  background-color: #ffffffcc;
+  backdrop-filter: blur(10px);
+}
+
+/* ====== 用户中心下拉菜单 ====== */
+/* 用户下拉菜单容器 */
+.user-dropdown {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+/* 触发按钮样式 */
+.user-trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition);
+    color: var(--gray-700);
+    font-size: 0.875rem;
+    font-weight: 400;
+}
+.user-trigger:hover {
+    background-color: var(--gray-100);
+    color: var(--primary-color);
+}
+.user-trigger .fa-user-circle {
+    font-size: 1.25rem;
+    color: var(--primary-color);
+}
+.dropdown-arrow {
+    font-size: 0.75rem;
+    transition: transform 0.3s ease;
+    margin-left: 0.25rem;
+}
+.user-dropdown:hover .dropdown-arrow {
+    transform: rotate(180deg);
+}
+/* 下拉菜单内容 */
+.dropdown-content {
+    position: absolute;
+    top: 105%;
+    right: 0;
+    width: 280px;
+    background-color: #ffffff;
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+    z-index: 1001;
+    overflow: hidden;
+    margin-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+.user-dropdown:hover .dropdown-content {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+/* 用户信息区域 */
+.user-info-section {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1rem 0.5rem 1rem;
+    background: linear-gradient(135deg, var(--primary-color-light), var(--primary-color));
+    color: var(--gray-700);
+}
+.user-avatar {
+    margin-right: 0.75rem;
+}
+.user-avatar .fa-user-circle {
+    font-size: 3rem;
+    color: var(--gray-700);
+}
+.user-details {
+    flex: 1;
+}
+.user-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 0.25rem;
+}
+.user-id {
+    font-size: 0.85rem;
+    opacity: 0.9;
+    margin-bottom: 0.1rem;
+    word-break: break-all;
+}
+.user-email {
+    font-size: 0.85rem;
+    opacity: 0.9;
+    margin-bottom: 0.1rem;
+    word-break: break-all;
+}
+/* 分隔线 */
+.dropdown-divider {
+    height: 1px;
+    background-color: var(--gray-200, #e5e7eb);
+    margin: 0.5rem 0;
+}
+/* 下拉菜单项 */
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    color: var(--gray-700);
+    text-decoration: none;
+    transition: var(--transition);
+    font-size: 0.875rem;
+}
+.dropdown-item:hover {
+    background-color: var(--gray-100);
+    color: var(--primary-color);
+    padding-left: 1.25rem;
+}
+.dropdown-item i {
+    width: 1.25rem;
+    margin-right: 0.75rem;
+    font-size: 0.9rem;
+    text-align: center;
+}
+/* 退出按钮特殊样式 */
+.logout-btn {
+    color: var(--danger-color, #dc2626);
+}
+.logout-btn:hover {
+    background-color: rgba(220, 38, 38, 0.1);
+    color: var(--danger-color, #dc2626);
+}
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .dropdown-content {
+        position: fixed;
+        top: auto;
+        right: 1rem;
+        left: 1rem;
+        bottom: 0;
+        width: auto;
+        margin-top: 0;
+        border-radius: var(--border-radius) var(--border-radius) 0 0;
+        transform: translateY(100%);
+    }
+    
+    .user-dropdown:hover .dropdown-content {
+        transform: translateY(0);
+    }
+}
+
+
+/* ====== 顶部导航栏移动端 ====== */
+.menu-toggle {
+  display: none;
+  background: var(--primary-color);
+  border: none;
+  font-size: 1.5rem;
+  color: white;
+  cursor: pointer;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  box-shadow: 0 2px 8px rgba(67, 97, 238, 0.3);
+  z-index: 1001;
+}
 
 /* 菜单背景遮罩 */
 .menu-backdrop {
@@ -141,35 +420,6 @@
     }
 }
 
-/* 桌面端样式 */
-@media (min-width: 769px) {
-    .menu-toggle {
-        display: none;
-    }
-    
-    .nav-links {
-        display: flex;
-        gap: 1.5rem;
-    }
-    
-    .nav-link {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        color: #333;
-        text-decoration: none;
-        padding: 8px 12px;
-        border-radius: 4px;
-        transition: all 0.3s ease;
-    }
-    
-    .nav-link:hover,
-    .nav-link.active {
-        background-color: #f5f5f5;
-        color: var(--primary-hover);
-    }
-}
-
 /* 容器样式 */
 .container {
     max-width: 1200px;
@@ -179,8 +429,8 @@
 
 /* 警告消息样式 */
 .alert {
-    padding: 15px;
-    margin-bottom: 20px;
+    padding: 8px;
+    margin-bottom: 8px;
     border-radius: 8px;
     display: flex;
     align-items: center;
@@ -236,29 +486,6 @@
     opacity: 0;
 }
 
-/* 页脚样式 */
-.footer {
-    margin-top: 40px;
-    padding: 20px 0;
-    border-top: 1px solid #eee;
-    text-align: center;
-}
-
-.footer-text {
-    color: #666;
-    margin: 0;
-}
-
-.footer-link {
-    color: var(--secondary-color);
-    text-decoration: none;
-    margin: 0 0;
-}
-
-.footer-link:hover {
-    text-decoration: underline;
-}
-
 /* 基础表格样式 */
 .table {
     width: 100%;
@@ -270,6 +497,8 @@
     padding: 12px;
     border: 1px solid #dee2e6;
     text-align: left;
+    border-left: none;
+    border-right: none;
 }
 
 .table th {
@@ -277,40 +506,10 @@
     font-weight: 600;
 }
 
-/* 基础导航样式 */
-nav {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 16px;
-    background-color: #fff;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    position: relative;
-    z-index: 100;
-}
-
-.nav-left .nav-logo {
-    font-family: 'youth';
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--primary-color);
-    text-decoration: none;
-}
-
-.nav-right {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
 .flash {
     position: fixed;
     min-width: 240px;
     max-width: 16%;
     z-index: 999;
-    margin-top: 5%;
-    margin-left: 84%;
+    margin-top: 64px;
 }

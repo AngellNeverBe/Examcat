@@ -1,0 +1,501 @@
+<!-- 用户中心内容 (AJAX版本) -->
+<div class="user-profile-container">
+    <!-- 两栏布局：侧边栏 + 内容区域 -->
+    <div class="user-layout">
+        <!-- 左侧固定导航栏 -->
+        <div class="user-sidebar">
+            <div class="sidebar-sticky">
+                <!-- 用户信息摘要 -->
+                <div class="sidebar-user-info">
+                    <div class="user-avatar-large">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                    <div class="user-summary">
+                        <h3 class="username">{{ session['username'] }}</h3>
+                        <p class="user-email text-muted">{{ session['email'] }}</p>
+                        <div class="user-stats">
+                            <span class="stat-item">
+                                <i class="fas fa-id-card"></i> ID: {{ session['user_id'] }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 导航标签 -->
+                <nav class="sidebar-nav">
+                    <ul class="nav-tabs-vertical">
+                        <li class="nav-item">
+                            <a href="#profile" class="nav-link" data-tab="profile">
+                                <i class="fas fa-user"></i>
+                                <span>个人资料</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#replies" class="nav-link" data-tab="replies">
+                                <i class="fas fa-comment"></i>
+                                <span>我的回复</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#statistics" class="nav-link" data-tab="statistics">
+                                <i class="fas fa-chart-line"></i>
+                                <span>学习统计</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#favorites" class="nav-link" data-tab="favorites">
+                                <i class="fas fa-star"></i>
+                                <span>我的收藏</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#wrong" class="nav-link" data-tab="wrong">
+                                <i class="fas fa-times-circle"></i>
+                                <span>我的错题</span>
+                            </a>
+                        </li>
+                        <li class="nav-item logout-nav-item">
+                            <a href="{{ url_for('auth.logout') }}" class="nav-link logout-btn">
+                                <i class="fas fa-sign-out-alt"></i>
+                                <span>退出登录</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+
+        <!-- 右侧内容区域 -->
+        <div class="user-content">
+
+            <!-- 个人资料标签页 -->
+            <div id="profile-tab" class="tab-content">
+                <div class="card">
+                    <div class="card-title">
+                        <h4><i class="fas fa-user"></i> 个人资料</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="profile-info">
+                            <div class="info-row">
+                                <div class="info-label">用户名</div>
+                                <div class="info-value">{{ session['username'] }}</div>
+                            </div>
+                            <div class="info-row">
+                                <div class="info-label">用户ID</div>
+                                <div class="info-value">{{ session['user_id'] }}</div>
+                            </div>
+                            <div class="info-row">
+                                <div class="info-label">邮箱</div>
+                                <div class="info-value">{{ session['email'] }}</div>
+                            </div>
+                            <div class="info-row">
+                                <div class="info-label">注册时间</div>
+                                <div class="info-value">{{ user_data.created_at if user_data else '未知' }}</div>
+                            </div>
+                            <div class="info-row">
+                                <div class="info-label">身份</div>
+                                <div class="info-value">
+                                    {% if session.get('is_admin') %}
+                                        <span class="badge badge-danger">管理员</span>
+                                    {% else %}
+                                        <span class="badge badge-primary">同学</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- <div class="profile-actions mt-4">
+                            <button class="btn btn-primary">
+                                <i class="fas fa-edit"></i> 编辑资料
+                            </button>
+                            <button class="btn btn-outline-secondary">
+                                <i class="fas fa-key"></i> 修改密码
+                            </button>
+                        </div> -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 我的回复标签页 -->
+            <div id="replies-tab" class="tab-content">
+                <div class="card">
+                    <div class="card-title">
+                        <h4><i class="fas fa-comment"></i> 我的回复</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="empty-state text-center py-5">
+                            <i class="fas fa-comments" style="font-size: 3rem; color: var(--info-color); margin-bottom: 1rem;"></i>
+                            <h3>暂无回复记录</h3>
+                            <p class="text-muted">您还没有发表过任何回复。</p>
+                            <p class="text-muted">该功能将在后续版本中推出。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 学习统计标签页 -->
+            <div id="statistics-tab" class="tab-content">
+                <div class="statistics-section">
+                    <div class="card">
+                        <div class="card-title">
+                            <h4><i class="fas fa-chart-pie"></i> 学习统计分析</h4>
+                            <!-- <p class="text-muted">查看个人学习表现，发现优势与提升空间</p> -->
+                        </div>
+                        
+                        <!-- 总体概览统计卡片 -->
+                        <div class="card-body">
+                            <div class="stat-card-section mb-4">
+                                <div class="stat-card">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-percentage"></i>
+                                    </div>
+                                    <div class="stat-label">总体正确率</div>
+                                    <div class="stat-value">{{ overall_accuracy|round(1) }}%</div>
+                                    <div class="progress-bar-container mt-2">
+                                        <div class="progress-bar 
+                                            {% if overall_accuracy < 60 %}bg-danger
+                                            {% elif overall_accuracy < 80 %}bg-warning
+                                            {% else %}bg-success{% endif %}" 
+                                            style="width: {{ overall_accuracy }}%;">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="stat-card">
+                                    <div class="stat-icon" style="background-color: rgba(255, 183, 3, 0.1); color: var(--warning-color);">
+                                        <i class="fas fa-tasks"></i>
+                                    </div>
+                                    <div class="stat-label">已答题目</div>
+                                    <div class="stat-value">{{ total }}</div>
+                                </div>
+                                
+                                <div class="stat-card">
+                                    <div class="stat-icon" style="background-color: rgba(230, 57, 70, 0.1); color: var(--danger-color);">
+                                        <i class="fas fa-times-circle"></i>
+                                    </div>
+                                    <div class="stat-label">错题数量</div>
+                                    <div class="stat-value">{{ wrong }}</div>
+                                </div>
+                            </div>
+                            
+                            <!-- 按题型统计 -->
+                            {% if type_stats and type_stats|length > 0 %}
+                            <div class="mb-4">
+                                <h3 class="mb-3"><i class="fas fa-chart-bar"></i> 题型分布分析</h3>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>题目类型</th>
+                                                <th>已答题数</th>
+                                                <th>答对题数</th>
+                                                <th>正确率</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for stat in type_stats %}
+                                            <tr>
+                                                <td>
+                                                    <span class="badge badge-info">
+                                                        {{ stat.type }}
+                                                    </span>
+                                                </td>
+                                                <td>{{ stat.total }}</td>
+                                                <td>{{ stat.correct }}</td>
+                                                <td class="font-weight-bold
+                                                    {% if stat.accuracy < 60 %}text-danger
+                                                    {% elif stat.accuracy < 80 %}text-warning
+                                                    {% else %}text-success{% endif %}">
+                                                    {{ stat.accuracy|round(1) }}%
+                                                </td>
+                                                <td>
+                                                    <div class="progress-bar-container">
+                                                        <div class="progress-bar 
+                                                            {% if stat.accuracy < 60 %}bg-danger
+                                                            {% elif stat.accuracy < 80 %}bg-warning
+                                                            {% else %}bg-success{% endif %}" 
+                                                            style="width: {{ stat.accuracy }}%;">
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- 按类别统计 -->
+                            {% if category_stats and category_stats|length > 0 %}
+                            <div class="mb-4">
+                                <h3 class="mb-3"><i class="fas fa-tags"></i> 分类表现分析</h3>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>知识点分类</th>
+                                                <th>已答题数</th>
+                                                <th>答对题数</th>
+                                                <th>正确率</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for stat in category_stats %}
+                                            <tr>
+                                                <td>
+                                                    <span class="badge badge-primary">{{ stat.category }}</span>
+                                                </td>
+                                                <td>{{ stat.total }}</td>
+                                                <td>{{ stat.correct }}</td>
+                                                <td class="font-weight-bold
+                                                    {% if stat.accuracy < 60 %}text-danger
+                                                    {% elif stat.accuracy < 80 %}text-warning
+                                                    {% else %}text-success{% endif %}">
+                                                    {{ stat.accuracy|round(1) }}%
+                                                </td>
+                                                <td>
+                                                    <div class="progress-bar-container">
+                                                        <div class="progress-bar 
+                                                            {% if stat.accuracy < 60 %}bg-danger
+                                                            {% elif stat.accuracy < 80 %}bg-warning
+                                                            {% else %}bg-success{% endif %}" 
+                                                            style="width: {{ stat.accuracy }}%;">
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- 错题分析 -->
+                            <!-- {% if worst_questions and worst_questions|length > 0 %}
+                            <div class="mb-4">
+                                <h3 class="mb-3"><i class="fas fa-exclamation-triangle"></i> 错题分析 (Top {{ worst_questions|length }})</h3>
+                                <div class="wrong-questions-list">
+                                    {% for q in worst_questions %}
+                                    <div class="wrong-question-item mb-3 p-3 border rounded">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <div>
+                                                <span class="badge badge-danger">题 {{ q.question_id }}</span>
+                                                <span class="text-muted ml-2">错误次数: {{ q.wrong_times }}</span>
+                                            </div>
+                                            <a href="{{ url_for('questions.show', qid=q.question_id) }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-external-link-alt"></i> 查看题目
+                                            </a>
+                                        </div>
+                                        <p class="mb-0">{{ q.stem|truncate(150) }}</p>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-check-circle text-success" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                                <h4>暂无错题记录</h4>
+                                <p class="text-muted">继续保持良好状态！</p>
+                            </div>
+                            {% endif %} -->
+                            
+                            <!-- 考试历史 -->
+                            <!-- {% if exam_history and exam_history|length > 0 %}
+                            <div class="mb-4">
+                                <h3 class="mb-3"><i class="fas fa-history"></i> 最近考试记录</h3>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>考试ID</th>
+                                                <th>得分</th>
+                                                <th>开始时间</th>
+                                                <th>持续时间</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for exam in exam_history %}
+                                            <tr>
+                                                <td>#{{ exam.id }}</td>
+                                                <td class="font-weight-bold
+                                                    {% if exam.score < 60 %}text-danger
+                                                    {% elif exam.score < 80 %}text-warning
+                                                    {% else %}text-success{% endif %}">
+                                                    {{ exam.score|round(1) }}%
+                                                </td>
+                                                <td>{{ exam.start_time }}</td>
+                                                <td>{{ exam.duration }}秒</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            {% endif %} -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 我的收藏标签页 -->
+            <div id="favorites-tab" class="tab-content">
+                <div class="card">
+                    <div class="card-title">
+                        <h4><i class="fas fa-star"></i> 我的收藏</h4>
+                        <!-- <p class="text-muted">收藏的题目便于重点复习</p> -->
+                    </div>
+                    <div class="card-body">
+                    {% if favorites and favorites|length > 0 %}
+                        {% for f in favorites %}
+                        <div class="wrong-question-item">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    <span class="badge badge-danger">题 {{ f.order }}</span>
+                                    <span class="badge badge-info">{{ f.type }}</span>
+                                    <span class="badge badge-primary">{{ f.category }}</span>
+                                </div>
+
+                                <form class="update-tag-form d-inline-flex gap-1 ml-2" data-qid="{{ f.question_id }}" method="post" action="{{ url_for('favorites.update_tag', qid=f.question_id) }}">
+                                    <input type="text" name="tag" placeholder="标记" value="{{ f.tag }}" class="form-control form-control-sm" 
+                                        style="width: 300px;
+                                            min-height: 20px;
+                                            padding: 0px 10px;">
+                                    <button type="submit" class="ajax-nav-link btn btn-outline-primary btn-sm" 
+                                        style="max-height: 10px;">
+                                        <i class="fas fa-save"></i>
+                                    </button>
+                                </form>
+
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('questions.show', qid=f.question_id) }}" class="ajax-nav-link btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-external-link-alt"></i> 查看
+                                    </a>
+                                </div>
+                                
+                            </div>
+
+                            <p class="mb-1">{{ f.stem|truncate(50) }}</p>
+
+                        </div>
+                        {% endfor %}
+
+                    {% else %}
+                    <div class="empty-state text-center py-5">
+                        <i class="fas fa-star" style="font-size: 3rem; color: var(--warning-color); margin-bottom: 1rem;"></i>
+                        <h3>暂无收藏题目</h3>
+                        <p class="text-muted">您还没有收藏任何题目。在题目页面点击收藏按钮添加收藏。</p>                        
+                    </div>
+                    {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 我的错题标签页 -->
+            <div id="wrong-tab" class="tab-content">
+                <div class="card">
+                    <div class="card-title">
+                        <h4><i class="fas fa-times-circle"></i> 我的错题</h4>
+                        <!-- <p class="text-muted">重点复习做错的题目，避免重复犯错</p> -->
+                    </div>
+                    
+                    
+                    <div class="card-body">
+
+                        <!-- 错题统计 -->
+                        <!-- <h3 class="mb-3"><i class="fas fa-chart-bar"></i> 错题概览</h3> -->
+                        <div class="stat-card-section mb-4">
+                            <div class="stat-card">
+                                <div class="stat-icon" style="background-color: rgba(230, 57, 70, 0.1); color: var(--danger-color);">
+                                    <i class="fas fa-times-circle"></i>
+                                </div>
+                                <div class="stat-label">总错误次数</div>
+                                <div class="stat-value">{{ wrong_count }}</div>
+                                <div class="stat-desc">正确 {{ correct_count }} 次</div>
+                            </div>                            
+
+                            <div class="stat-card">
+                                <div class="stat-icon" style="background-color: rgba(108, 117, 125, 0.1); color: var(--secondary-color);">
+                                    <i class="fas fa-tags"></i>
+                                </div>
+                                <div class="stat-label">涉及分类</div>
+                                <div class="stat-value">
+                                    {{ wrong_unique_categories_count }}
+                                </div>
+                                <div class="stat-desc">个知识点分类</div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <div class="stat-icon" style="background-color: rgba(40, 167, 69, 0.1); color: var(--success-color);">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div class="stat-label">已掌握</div>
+                                <div class="stat-value">
+                                    {{ (wrong_once_count / wrong_questions|length * 100)|round(1) if wrong_questions|length > 0 else 0 }}%
+                                </div>
+                                <div class="stat-desc">{{ wrong_once_count }} 题只错一次</div>
+                            </div>
+                        </div>
+
+                        {% if wrong_questions and wrong_questions|length > 0 %}
+                        <div class="mb-4">
+                            <!-- <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <span class="badge badge-danger">共 {{ wrong_questions|length }} 道错题</span>
+                                    <span class="text-muted ml-2">总错误次数: {{ wrong_total_count }}</span>
+                                </div>
+                                <a href="{{ url_for('questions.start', mode='wrong') if current_bank_id else '#' }}" class="btn btn-primary">
+                                    <i class="fas fa-redo"></i> 专项练习错题
+                                </a>
+                            </div> -->
+                            <div class="mb-4">
+                                <h3 class="mb-3"><i class="fas fa-exclamation-triangle"></i> 所有错题 (共 {{ wrong_questions|length }} 题)</h3>
+                                <div class="wrong-questions-list">
+                                    {% for wq in wrong_questions %}
+                                    <div class="wrong-question-item">                                        
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <div class="wrong-question-item-info">                                                
+                                                <span class="badge badge-danger">题 {{ wq.order }}</span>
+                                                <h5>
+                                                    「 <span style="font-weight: 400;color: var(--gray-600);">{{ wq.bankname }}</span> 」
+                                                </h5>
+                                                <span class="text-muted" style="color: var(--danger-color);">错误次数: {{ wq.wrong_count }}</span>
+                                            </div>
+ 
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{{ url_for('questions.show', qid=wq.question_id) }}" class="ajax-nav-link btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-external-link-alt"></i> 查看
+                                                </a>
+                                                <a href="{{ url_for('questions.show', qid=wq.question_id) }}?mode=wrong" class="ajax-nav-link btn btn-sm btn-outline-info">
+                                                    <i class="fas fa-redo"></i> 重做
+                                                </a>
+                                                <!-- <form method="post" action="{{ url_for('favorites.add', qid=wq.question_id) }}" class="d-inline">
+                                                    <button type="submit" class="ajax-nav-link btn btn-sm btn-warning">
+                                                        <i class="fas fa-star"></i> 收藏
+                                                    </button>
+                                                </form> -->
+                                            </div>
+                                            
+                                        </div>
+                                        <p class="mb-0">{{ wq.stem|truncate(20) }}</p>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        
+                        {% else %}
+                        <div class="empty-state text-center py-5">
+                            <i class="fas fa-check-circle" style="font-size: 3rem; color: var(--success-color); margin-bottom: 1rem;"></i>
+                            <h3>暂无错题记录</h3>
+                            <p class="text-muted">太棒了！您目前没有错题记录，继续保持良好状态。</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

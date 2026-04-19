@@ -1,66 +1,63 @@
 """
 examcat - 主页面路由蓝图
 """
-from flask import Blueprint, render_template, redirect, url_for, flash
-from datetime import datetime
+from flask import Blueprint, render_template, redirect, url_for, flash, make_response, jsonify
 from ..utils.auth import login_required, get_user_id
-from ..utils.database import get_db, get_current_bank, get_current_question_id, get_bank_progress, get_last_unfinished_exam
+from ..utils.database import reset_history_record
+from ..utils.banks import fetch_bank
+from ..utils.page_data import get_index_data
+from ..utils.cookie import set_cookies_from_dict
 
 main_bp = Blueprint('main', __name__, template_folder='../templates/base')
 
 @main_bp.route('/')
 @login_required
 def index():
-    """Home page route."""
+    """Route to index."""
     user_id = get_user_id()
-    current_bank = get_current_bank(user_id)
-    
-    # 使用新的函数获取当前题目ID（确保属于当前题库）
-    current_seq_qid = get_current_question_id(user_id)
-    
-    # 获取当前题库的进度信息
-    progress_info = get_bank_progress(user_id, current_bank)
 
-    # 获取当前未完成的考试ID
-    last_unfinished_exam = get_last_unfinished_exam(user_id)
-    last_unfinished_exam_id = last_unfinished_exam['id'] if last_unfinished_exam else None
+    # 获取首页所需数据和cookies
+    data, cookies = get_index_data(user_id)
+    resp = make_response(render_template('index.html', **data))
+    if cookies:
+        resp = set_cookies_from_dict(resp, cookies)
+    return resp
 
-    return render_template('index.html', 
-                          current_year=datetime.now().year,
-                          current_seq_qid=current_seq_qid,
-                          current_bank=current_bank,
-                          last_unfinished_exam_id = last_unfinished_exam_id,
-                          answered=progress_info['answered'],
-                          total=progress_info['total'],
-                          progress_percentage=progress_info['progress'])
-
-@main_bp.route('/reset_history', methods=['POST'])
+@main_bp.route('/banks/<int:bid>/history/reset', methods=['POST'])
 @login_required
-def reset_history():
-    """Route to reset a user's answer history."""
-    user_id = get_user_id()
-    current_bank = get_current_bank(user_id)
+def reset_history(bid: int):
+    """
+    重置用户在指定题库的答题记录
     
+    Args:
+        bid (int): 题库ID
+        
+    Returns:
+        JSON响应
+    """
     try:
-        conn = get_db()
-        c = conn.cursor()
+        user_id = get_user_id()
         
-        # Delete only history for questions in current bank
-        c.execute('''
-            DELETE FROM history 
-            WHERE user_id = ? 
-              AND question_id IN (
-                  SELECT id FROM questions WHERE bank_name = ?
-              )
-        ''', (user_id, current_bank))
+        # 验证题库是否存在
+        bank_data = fetch_bank(bid)
+        if not bank_data:
+            return jsonify({'success': False, 'message': '题库不存在'}), 404
         
-        # Also clear the current sequential question ID
-        # 注意：这里设置为NULL，下次调用get_current_question_id时会自动计算新的题目ID
-        c.execute('UPDATE users SET current_seq_qid = NULL WHERE id = ?', (user_id,))
-        conn.commit()
+        # 重置答题记录
+        reset_count = reset_history_record(user_id, bid)
         
-        flash("当前题库答题历史已重置。现在您可以重新开始答题。", "success")
+        # 清除相关的cookie缓存
+        response = make_response(jsonify({
+            'success': True, 
+            'message': f'已重置答题记录，共重置{reset_count}条记录',
+            'reset_count': reset_count
+        }))
+        
+        # 清除当前题目相关的cookie，因为重置后应该从第一题开始
+        response.delete_cookie('current_seq_qid')
+        
+        return response
+        
     except Exception as e:
-        flash(f"重置历史时出错: {str(e)}", "error")
-        
-    return redirect(url_for('questions.random_question'))
+        # logger.error(f"重置答题记录失败，用户ID {get_user_id()}，题库ID {bid}: {e}")
+        return jsonify({'success': False, 'message': f'重置失败: {str(e)}'}), 500

@@ -1,15 +1,104 @@
 .hero-section {
     text-align: center;
-    flex: 1;
+    flex: 0 0 368px;
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
     justify-content: flex-start;
 }
+.advanced-section {
+    flex: 1;
+}
+
+.hero-content {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-content: center;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+}
+/* 一言 */
+.hitokoto-content {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-content: center;
+    justify-content: center;
+    align-items: center;
+    font-weight: 300;
+}
+#hitokoto #hitokoto-text {
+    white-space: pre-line;  /* 使 \n 生效为换行 */
+    text-decoration: none;  /* 可根据需要调整链接样式 */
+}
+#hitokoto #hitokoto-from {
+    font-size: 14px;
+    margin-right: 2rem;
+    place-self: flex-end;
+}
+
+/* 考试倒计时 */
+.countdown-info {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-content: center;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1rem;
+}
+.countdown-info-left {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+}
+#countdownCourse {
+    font-size: 1.2rem;
+    text-align: left;
+    color: var(--gray-600);
+}
+.countdown-info-left > span {
+    font-size: 0.8rem;
+    color: #666;
+}
+.countdown-info-right {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-content: flex-end;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 2px;
+}
+#countdownDays {
+    font-size: 3rem;
+    font-family: 'youth';
+    font-weight: 800;
+    color: var(--gray-600);
+}
+.countdown-info-right > span {
+    font-size: 0.8rem;
+    color: #666;
+}
+#countdownHint {
+    font-size: 0.6rem;
+    color: #666;
+}
+#hintCourseName {
+    color: var(--gray-600);
+}
 
 .display-title {
     font-size: 2.5rem;
     font-weight: 700;
+}
+
+.hero-content img {
+    max-width: 64px;
+    max-height: 64px;
 }
 
 .lead {
@@ -266,7 +355,7 @@
 }
 
 /* 题库进度条样式 */
-.progress {
+/* .progress {
     height: 25px;
     border-radius: 12px;
     overflow: hidden;
@@ -290,7 +379,7 @@
         inset -7px -7px 15px rgba(0, 0, 0, 0.2), 
         rgba(0, 0, 0, 0.16) 0px 10px 36px 0px, rgb(0 0 0 / 23%) 5px 0px 6px 1px;
     border-radius:12px    
-}
+} */
 
 /* 功能卡片网格布局 */
 .card-grid {
@@ -310,25 +399,12 @@
     text-decoration: underline;
 }
 
-body > main > div.main-index-section > div.hero-section.mb-4 > div.card.card-index > div > div.d-flex.justify-content-center.align-items-center.flex-wrap > a {
-    display: flex;
-    justify-content: center; /* 水平居中 */
-    align-items: center;    /* 垂直居中 */
-    padding: 0 0;
-    margin-left: 10px;
-    min-height: 0;
-}
-
-.mb-2 {
-    margin-bottom: 0rem !important;
-}
-
-.main-index-section {
+.index-section {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
     gap: 2rem;
-    justify-content: space-between;
+    justify-content: flex-start;
     max-width: 1200px;
 }
 
@@ -336,14 +412,15 @@ body > main > div.main-index-section > div.hero-section.mb-4 > div.card.card-ind
     min-width: stretch;
 }
 .card-index {
+    min-height: 300px;
     min-width: stretch;
 }
 .feature-buttons {
     margin-top: 1rem;
     display: flex;
     flex-direction: column;
-    min-width: max-content;
-    padding: 0 20%;
+    min-width: stretch;
+    /* padding: 0 20%; */
     flex-wrap: nowrap;
     align-items: stretch;
 }
@@ -352,14 +429,476 @@ body > main > div.main-index-section > div.hero-section.mb-4 > div.card.card-ind
         padding: 0 0
     }
 }
+/* 
 .feature-buttons .btn,
 .mode-card .btn {
     box-shadow: rgba(50, 50, 93, 0.25) 0px 13px 27px -5px, rgba(0, 0, 0, 0.3) 0px 8px 16px -8px;
 }
-.app-logo {
-    margin-bottom: 0 !important;
-}
+ */
 
 .card-mode {
-    min-height: stretch;
+    /* min-height: stretch;
+    min-width: 750px; */
+}
+
+/* ======== 翻转卡片 ======== */
+
+.flip-card {
+  min-height: 150px;
+  min-width: stretch;
+  background-color: transparent;
+  perspective: 1000px;
+  font-family: sans-serif;  
+  margin-bottom: 1.5rem;
+}
+
+.flip-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  transition: transform 0.8s;
+  transform-style: preserve-3d;
+}
+
+.flip-card:hover .flip-card-inner {
+  transform: rotateX(180deg);
+}
+
+.flip-card-front, .flip-card-back {
+    background-color: var(--card-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    padding: 1.5rem 1.5rem 1rem 1.5rem;
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+
+.flip-card-front {
+  /* background: linear-gradient(120deg, bisque 60%, rgb(255, 231, 222) 88%,
+     rgb(255, 211, 195) 40%, rgba(255, 127, 80, 0.603) 48%); */
+  /* color: coral; */
+}
+
+.flip-card-back {
+  /* background: linear-gradient(120deg, rgb(255, 174, 145) 30%, coral 88%,
+     bisque 40%, rgb(255, 185, 160) 78%); */
+  /* color: white; */
+  transform: rotateX(180deg);
+}
+
+/* ======== 随动卡片 ======== */
+/* From Uiverse.io by kennyotsu */ 
+
+.move-card {
+  position: relative;
+  min-height: 150px;
+  min-width: stretch;
+  transition: 200ms;
+  margin-bottom: 1.5rem;
+}
+
+.move-card-inner {
+  background-color: var(--card-color);
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  padding: 1.5rem;
+
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: 700ms;
+}
+
+.tracker {
+  position: absolute;
+  z-index: 200;
+  width: 100%;
+  height: 100%;
+}
+
+.move-card:hover .move-card-inner::before {
+  transition: 200ms;
+  content: '';
+  opacity: 80%;
+}
+
+.move-card-canvas {
+  perspective: 800px;
+  inset: 0;
+  z-index: 200;
+  position: absolute;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr 1fr 1fr;
+  gap: 0px 0px;
+  grid-template-areas: "tr-1 tr-2 tr-3 tr-4 tr-5"
+    "tr-6 tr-7 tr-8 tr-9 tr-10"
+    "tr-11 tr-12 tr-13 tr-14 tr-15"
+    "tr-16 tr-17 tr-18 tr-19 tr-20"
+    "tr-21 tr-22 tr-23 tr-24 tr-25";
+}
+
+.move-card-inner::before {
+  filter: blur(2rem);
+  opacity: 30%;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  z-index: -1;
+  transition: 1000ms;
+}
+
+.tr-1 { grid-area: tr-1; }
+.tr-2 { grid-area: tr-2; }
+.tr-3 { grid-area: tr-3; }
+.tr-4 { grid-area: tr-4; }
+.tr-5 { grid-area: tr-5; }
+.tr-6 { grid-area: tr-6; }
+.tr-7 { grid-area: tr-7; }
+.tr-8 { grid-area: tr-8; }
+.tr-9 { grid-area: tr-9; }
+.tr-10 { grid-area: tr-10; }
+.tr-11 { grid-area: tr-11; }
+.tr-12 { grid-area: tr-12; }
+.tr-13 { grid-area: tr-13; }
+.tr-14 { grid-area: tr-14; }
+.tr-15 { grid-area: tr-15; }
+.tr-16 { grid-area: tr-16; }
+.tr-17 { grid-area: tr-17; }
+.tr-18 { grid-area: tr-18; }
+.tr-19 { grid-area: tr-19; }
+.tr-20 { grid-area: tr-20; }
+.tr-21 { grid-area: tr-21; }
+.tr-22 { grid-area: tr-22; }
+.tr-23 { grid-area: tr-23; }
+.tr-24 { grid-area: tr-24; }
+.tr-25 { grid-area: tr-25; }
+
+.tr-1:hover ~ .move-card-inner { transition: 125ms ease-in-out; transform: rotateX(20deg) rotateY(-10deg) rotateZ(0deg); }
+.tr-2:hover ~ .move-card-inner { transition: 125ms ease-in-out; transform: rotateX(20deg) rotateY(-5deg) rotateZ(0deg); }
+.tr-3:hover ~ .move-card-inner { transition: 125ms ease-in-out; transform: rotateX(20deg) rotateY(0deg) rotateZ(0deg); }
+.tr-4:hover ~ .move-card-inner { transition: 125ms ease-in-out; transform: rotateX(20deg) rotateY(5deg) rotateZ(0deg); }
+.tr-5:hover ~ .move-card-inner { transition: 125ms ease-in-out; transform: rotateX(20deg) rotateY(10deg) rotateZ(0deg); }
+.tr-6:hover ~ .move-card-inner { transition: 125ms ease-in-out; transform: rotateX(10deg) rotateY(-10deg) rotateZ(0deg); }
+.tr-7:hover ~ .move-card-inner { transition: 125ms ease-in-out; transform: rotateX(10deg) rotateY(-5deg) rotateZ(0deg); }
+.tr-8:hover ~ .move-card-inner { transition: 125ms ease-in-out; transform: rotateX(10deg) rotateY(0deg) rotateZ(0deg); }
+.tr-9:hover ~ .move-card-inner { transition: 125ms ease-in-out; transform: rotateX(10deg) rotateY(5deg) rotateZ(0deg); }
+.tr-10:hover ~ .move-card-inner { transition: 125ms ease-in-out; transform: rotateX(10deg) rotateY(10deg) rotateZ(0deg); }
+.tr-11:hover ~ .move-card-inner { transition: 125ms ease-in-out; transform: rotateX(0deg) rotateY(-10deg) rotateZ(0deg); }
+.tr-12:hover ~ .move-card-inner { transition: 125ms ease-in-out; transform: rotateX(0deg) rotateY(-5deg) rotateZ(0deg); }
+.tr-13:hover ~ .move-card-inner { transition: 125ms ease-in-out; transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+.tr-14:hover ~ .move-card-inner { transition: 125ms ease-in-out; transform: rotateX(0deg) rotateY(5deg) rotateZ(0deg); }
+.tr-15:hover ~ .move-card-inner { transition: 125ms ease-in-out; transform: rotateX(0deg) rotateY(10deg) rotateZ(0deg); }
+.tr-16:hover ~ .move-card-inner { transition: 125ms ease-in-out; transform: rotateX(-10deg) rotateY(-10deg) rotateZ(0deg); }
+.tr-17:hover ~ .move-card-inner { transition: 125ms ease-in-out; transform: rotateX(-10deg) rotateY(-5deg) rotateZ(0deg); }
+.tr-18:hover ~ .move-card-inner { transition: 125ms ease-in-out; transform: rotateX(-10deg) rotateY(0deg) rotateZ(0deg); }
+.tr-19:hover ~ .move-card-inner { transition: 125ms ease-in-out; transform: rotateX(-10deg) rotateY(5deg) rotateZ(0deg); }
+.tr-20:hover ~ .move-card-inner { transition: 125ms ease-in-out; transform: rotateX(-10deg) rotateY(10deg) rotateZ(0deg); }
+.tr-21:hover ~ .move-card-inner { transition: 125ms ease-in-out; transform: rotateX(-20deg) rotateY(-10deg) rotateZ(0deg); }
+.tr-22:hover ~ .move-card-inner { transition: 125ms ease-in-out; transform: rotateX(-20deg) rotateY(-5deg) rotateZ(0deg); }
+.tr-23:hover ~ .move-card-inner { transition: 125ms ease-in-out; transform: rotateX(-20deg) rotateY(0deg) rotateZ(0deg); }
+.tr-24:hover ~ .move-card-inner { transition: 125ms ease-in-out; transform: rotateX(-20deg) rotateY(5deg) rotateZ(0deg); }
+.tr-25:hover ~ .move-card-inner { transition: 125ms ease-in-out; transform: rotateX(-20deg) rotateY(10deg) rotateZ(0deg); }
+
+.noselect {
+  -webkit-touch-callout: none;
+   /* iOS Safari */
+  -webkit-user-select: none;
+   /* Safari */
+   /* Konqueror HTML */
+  -moz-user-select: none;
+   /* Old versions of Firefox */
+  -ms-user-select: none;
+   /* Internet Explorer/Edge */
+  user-select: none;
+   /* Non-prefixed version, currently
+									supported by Chrome, Edge, Opera and Firefox */
+}
+
+/* 首页动画效果 */
+.index-section {
+    animation: fadeInUp 0.5s ease-out forwards;
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* AJAX导航切换时的动画重置 */
+.page-content-updated .index-section {
+    animation: none;
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+.page-content-updated .index-section.animate-in {
+    animation: fadeInUp 0.5s ease-out forwards;
+}
+
+/* ======== 题目导航卡片样式 ======== */
+.question-navigation-card .card-body {
+    display: flex;
+    flex-direction: column;
+}
+
+.bank-name-container h5 {
+    font-weight: 600;
+    color: var(--gray-800);
+    margin-bottom: 0.25rem;
+}
+
+.bank-name-container small {
+    font-size: 0.875rem;
+}
+
+/* 进度条样式（复用banks.css） */
+.bank-progress {
+    margin: 1rem 0;
+}
+
+.progress-bar-stacked {
+    display: flex;
+    height: 15px;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #f8f9fa;
+    margin-bottom: 8px;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.progress-segment {
+    height: 100%;
+    transition: width 0.5s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-segment.correct {
+    background: var(--success-color);
+}
+
+.progress-segment.wrong {
+    background: #D15D5E;
+}
+
+.progress-segment.unanswered {
+    background: var(--gray-200);
+}
+
+.progress-segment:hover {
+    filter: brightness(110%);
+    transform: scale(1.02);
+    z-index: 1;
+}
+
+.progress-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.label-correct { color: var(--success-color); }
+.label-wrong { color: var(--danger-color); }
+.label-unanswered { color: var(--gray-600); }
+
+/* 题目导航网格 */
+.question-nav-container {
+    position: relative;
+    margin: 1rem 0;
+}
+.question-nav-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.question-nav-container::-webkit-scrollbar-track {
+    background: var(--gray-100);
+    border-radius: 3px;
+}
+
+.question-nav-container::-webkit-scrollbar-thumb {
+    background: var(--gray-400);
+    border-radius: 3px;
+}
+
+.question-nav-container::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-500);
+}
+
+.question-grid {
+    display: grid;
+    /* 固定10列网格 */
+    grid-template-columns: repeat(10, 1fr);
+    gap: 1.2rem;
+    width: 100%;
+    min-height: 100%;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    /* 确保网格项目按行排列 */
+    grid-auto-rows: min-content;
+    /* 移除绝对定位，允许内容流式布局 */
+    position: relative;
+    padding: 1rem 1rem;
+}
+
+/* 淡入淡出动画 */
+.fade-in {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: all;
+}
+
+.fade-out {
+    opacity: 0;
+    transform: translateX(20px);
+    pointer-events: none;
+}
+
+/* 题目导航格子样式（复用exam.css） */
+.question-grid-item {
+    aspect-ratio: 1;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    font-size: 1rem;
+    text-decoration: none;
+    box-shadow: var(--box-shadow);
+}
+
+.question-grid-item.unanswered {
+    background-color: #e9ecef5c;
+    color: #6c757d;
+}
+.question-grid-item.unanswered:hover {
+    border-color: var(--info-color);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.question-grid-item.answered {
+    background-color: var(--info-color);
+    color: white;
+}
+
+.question-grid-item.correct {
+    background-color: var(--success-color);
+    color: white;
+}
+.question-grid-item.correct:hover {
+    border-color: var(--info-color);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.question-grid-item.incorrect {
+    background-color: var(--danger-color);
+    color: white;
+}
+.question-grid-item.incorrect:hover {
+    border-color: var(--info-color);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.question-grid-item.current {
+    border-color: var(--warning-color);
+    box-shadow: 0 0 5px 3px rgba(255, 193, 7, 0.2);
+    background-color: inherit !important;
+}
+
+/* 翻页按钮 */
+.nav-pagination {
+    margin-top: auto;
+}
+
+.btn-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background-color: var(--gray-100);
+    border: 1px solid var(--gray-300);
+    color: var(--gray-700);
+    transition: all 0.2s ease;
+}
+
+.btn-circle:hover {
+    background-color: var(--gray-200);
+    border-color: var(--gray-400);
+    transform: translateY(-2px);
+}
+
+.btn-circle:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-circle:disabled:hover {
+    background-color: var(--gray-100);
+    border-color: var(--gray-300);
+    transform: none;
+}
+
+.page-info {
+    min-width: 120px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .question-grid {
+        /* 小屏幕上改为8列 */
+        grid-template-columns: repeat(8, 1fr);
+    }
+
+    .question-navigation-card {
+        min-height: 650px;
+    }
+
+    .question-nav-container {
+        height: 350px;
+    }
+}
+
+@media (max-width: 576px) {
+    .question-grid {
+        /* 更小屏幕上改为6列 */
+        grid-template-columns: repeat(6, 1fr);
+    }
+
+    .progress-labels {
+        flex-direction: column;
+        gap: 4px;
+        font-size: 0.75rem;
+    }
+
+    .btn-circle {
+        width: 40px;
+        height: 40px;
+    }
 }

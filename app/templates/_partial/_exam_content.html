@@ -1,0 +1,160 @@
+<!-- 配置数据元素（隐藏） -->
+<div id="examConfig" 
+     data-exam-id="{{ exam_id }}"
+     data-total-questions="{{ questions|length }}"
+     data-elapsed-time="{{ elapsed_time|default(0) }}"
+     data-exam-completed="{{ 1 if exam.complete else 0 }}"
+     data-save-url="{{ url_for('exams.exam_main', exam_id=exam_id) }}"
+     data-show-exams-url="{{ url_for('exams.exams_index') }}"
+     style="display: none;">
+</div>
+
+<div class="exam-container">
+    <!-- 左侧固定侧边栏 -->
+    <div class="exam-sidebar">
+        <div class="timer-container">
+            <div class="timer-display" id="timerDisplay">00:00:00</div>
+            <div class="timer-label">已用时间</div>
+        </div>
+        
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="fas fa-bars"></i> 题目导航
+            </div>
+            <div class="card-body">
+                <div class="question-grid" id="questionGrid">
+                    <!-- 题目导航格子将通过JavaScript动态生成 -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-body">
+                <div class="sidebar-buttons">
+                    <button type="submit" form="examForm" name="action" value="save" class="btn btn-outline-primary" {% if exam.complete %}disabled{% endif %}>
+                        <i class="fas fa-save"></i> 保存答案
+                    </button>
+                    <button type="submit" form="examForm" name="action" value="submit" class="btn btn-success" {% if exam.complete %}disabled{% endif %}>
+                        <i class="fas fa-paper-plane"></i> 提交答卷
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 右侧考试内容区域 -->
+    <div class="exam-content">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-clipboard-list"></i> 
+                    <span id="examTitle">模拟考试</span>
+                    <span class="badge badge-secondary ml-2" id="questionCount">共 {{ questions|length }} 题</span>
+                </div>
+                    <a href="{{ url_for('exams.exams_index') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-list"></i> 返回考试列表
+                    </a>
+            </div>
+            
+            <div class="card-body">
+                <form id="examForm" method="post" action="{{ url_for('exams.exam_main', exam_id=exam_id) }}" class="mb-4">
+                    {% for question in questions %}
+                    <div class="question-container" id="question-{{ loop.index }}"
+                    {% if exam.complete %}data-is-correct="{{ 1 if question.is_correct else 0 }}"{% endif %}>
+                        <div class="question-header">
+
+                            <span class="question-number">题 {{ loop.index }}</span>
+
+                            {% if question.type %}
+                                <span class="badge badge-info">{{ question.type }}</span>
+                            {% endif %}
+
+                            {% if question.difficulty == '简单' %}
+                            <span class="question-difficulty badge badge-success">简单</span>
+                            {% elif question.difficulty == '中等' %}
+                            <span class="question-difficulty badge badge-warning">中等</span>
+                            {% elif question.difficulty == '困难' %}
+                            <span class="question-difficulty badge badge-danger">困难</span>
+                            {% else %}
+                            <span class="question-difficulty badge badge-none">无</span>
+                            {% endif %}
+
+                        </div>
+                        
+                        <div class="question-stem">{{ question.stem }}</div>
+                        
+                        <!-- 隐藏的答案输入字段 -->
+                        <input type="hidden" name="answer_{{ question.id }}" id="answer_{{ question.id }}" 
+                               value="{{ question.answer if question.answer else '' }}">
+                        
+                        <!-- 选项区域 -->
+                        <div class="options-list">
+                            {% set user_answer = question.answer if question.answer else '' %}
+                            {% set correct_answer = question.correct_answer if question.correct_answer else '' %}
+                            
+                            {% for opt_key, opt_val in question.options.items() %}
+                            {% set is_selected = opt_key in user_answer %}
+                            {% set is_correct_option = opt_key in correct_answer %}
+                            
+                            <div class="option-item">
+                                <div class="option-card {% if is_selected %}selected{% endif %} 
+                                                      {% if exam.complete and is_correct_option %}correct{% endif %}
+                                                      {% if exam.complete and is_selected and not is_correct_option %}incorrect{% endif %}"
+                                     data-question-id="{{ question.id }}"
+                                     data-question-type="{{ question.type }}"
+                                     data-option-key="{{ opt_key }}">
+                                    <span class="option-key">{{ opt_key }}.</span>
+                                    <span class="option-value">{{ opt_val }}</span>
+                                    {% if exam.complete and is_correct_option %}
+                                    <i class="fas fa-check text-success ml-2 option-status-icon"></i>
+                                    {% elif exam.complete and is_selected and not is_correct_option %}
+                                    <i class="fas fa-times text-danger ml-2 option-status-icon"></i>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        {% if exam.complete %}
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                {% if user_answer %}
+                                    你的答案: <strong>{{ user_answer }}</strong>
+                                {% else %}
+                                    你未作答
+                                {% endif %}
+                                {% if not question.is_correct %}
+                                    | 正确答案: <strong>{{ correct_answer }}</strong>
+                                {% else %}
+                                    | <span class="text-success">回答正确</span>
+                                {% endif %}
+                            </small>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    
+                    {% if not exam.complete %}
+                    <div class="mt-4 text-center">
+                        <button type="submit" name="action" value="submit" class="btn btn-success">
+                            <i class="fas fa-paper-plane"></i> 提交答卷
+                        </button>
+                    </div>
+                    {% else %}
+                    <div class="mt-4 text-center">
+                        <a href="{{ url_for('exams.exams_index') }}" class="btn btn-primary">
+                            <i class="fas fa-list"></i> 返回考试列表
+                        </a>
+                    </div>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 浮动返回顶部按钮 
+<button id="backToTop" class="btn btn-primary" style="position: fixed; bottom: 20px; right: 20px; display: none;">
+    <i class="fas fa-arrow-up"></i>
+</button>
+-->

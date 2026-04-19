@@ -35,9 +35,10 @@ def create_app(config_name=None):
     
     # 初始化数据库
     with app.app_context():
-        from .utils.database import init_db, load_all_banks
+        from .utils.database import init_db
+        from .utils.banks import load_bank
         init_db()
-        load_all_banks()    
+        load_bank()    
     @lru_cache(maxsize=1)
     def get_app_config():
         """缓存配置获取，提高性能"""
@@ -63,6 +64,8 @@ def create_app(config_name=None):
 
 def register_blueprints(app):
     """注册所有蓝图"""
+    from .routes.api import api_bp
+    from .routes.ajax import ajax_bp
     from .routes.auth import auth_bp
     from .routes.main import main_bp
     from .routes.questions import questions_bp
@@ -72,6 +75,8 @@ def register_blueprints(app):
     from .routes.favorites import favorites_bp
     from .routes.browse import browse_bp
     
+    app.register_blueprint(api_bp)
+    app.register_blueprint(ajax_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(questions_bp)
@@ -80,7 +85,6 @@ def register_blueprints(app):
     app.register_blueprint(statistics_bp)
     app.register_blueprint(favorites_bp)
     app.register_blueprint(browse_bp)
-
 
 def register_error_handlers(app):
     """注册错误处理器"""
