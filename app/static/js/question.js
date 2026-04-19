@@ -1,11 +1,11 @@
 // question.js
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('question.js: DOMContentLoaded');
+    // console.log('question.js: DOMContentLoaded');
     initQuestionPage();
 });
 
 function initQuestionPage() {
-    console.log('question.js: 初始化题目页面');
+    // console.log('question.js: 初始化题目页面');
     
     // 初始化收藏按钮
     initFavoriteButtons();
@@ -23,7 +23,7 @@ function initQuestionPage() {
         // 显示评论区（针对已答题目）
         showCommentsSection();
         
-        console.log('question.js: 已答题目，不创建初始导航按钮以避免竞争条件');
+        // console.log('question.js: 已答题目，不创建初始导航按钮以避免竞争条件');
         // 对于直接浏览已答题的情况，不创建导航按钮
         // 避免触发额外的AJAX请求导致事件循环
         
@@ -38,12 +38,12 @@ function initQuestionPage() {
             
             if (nextQid || prevQid) {
                 // 使用页面中的数据创建导航
-                console.log('question.js: 使用页面数据创建导航');
+                // console.log('question.js: 使用页面数据创建导航');
                 createNavigationFromPageData({ bid, mode, next_qid: nextQid, prev_qid: prevQid });
             } else {
                 // 没有页面数据，检查是否需要导航
                 // 对于直接浏览已答题，可能不需要导航按钮
-                console.log('question.js: 没有页面导航数据，跳过创建导航按钮');
+                // console.log('question.js: 没有页面导航数据，跳过创建导航按钮');
             }
         }
     }
@@ -51,7 +51,7 @@ function initQuestionPage() {
 
 // 从页面数据创建导航
 function createNavigationFromPageData(data) {
-    console.log('question.js: 从页面数据创建导航:', data);
+    // console.log('question.js: 从页面数据创建导航:', data);
     
     const actionsDiv = document.querySelector('.question-actions');
     if (!actionsDiv) return;
@@ -87,11 +87,11 @@ function createNavigationFromPageData(data) {
 function initQuestionForm() {
     const questionForm = document.querySelector('.question-form');
     if (!questionForm) {
-        console.log('question.js: 未找到题目表单');
+        // console.log('question.js: 未找到题目表单');
         return;
     }
     
-    console.log('question.js: 找到表单，绑定事件');
+    // console.log('question.js: 找到表单，绑定事件');
     
     // 移除旧的submit事件监听器
     const newForm = questionForm.cloneNode(true);
@@ -100,14 +100,14 @@ function initQuestionForm() {
     // 绑定新的submit事件
     newForm.addEventListener('submit', handleQuestionSubmit);
     
-    console.log('question.js: 表单事件绑定完成');
+    // console.log('question.js: 表单事件绑定完成');
 }
 
 function handleQuestionSubmit(event) {
     event.preventDefault();
     event.stopPropagation();
     
-    console.log('question.js: 处理表单提交');
+    // console.log('question.js: 处理表单提交');
     
     const form = event.target;
     const submitBtn = form.querySelector('button[type="submit"]');
@@ -130,7 +130,7 @@ function handleQuestionSubmit(event) {
         'X-Requested-With': 'XMLHttpRequest'
     };
     
-    console.log('question.js: 发送AJAX请求到', form.action);
+    // console.log('question.js: 发送AJAX请求到', form.action);
     
     // 发送AJAX请求
     fetch(form.action, {
@@ -139,9 +139,9 @@ function handleQuestionSubmit(event) {
         headers: headers
     })
     .then(response => {
-        console.log('question.js: 收到响应，状态码:', response.status);
+        // console.log('question.js: 收到响应，状态码:', response.status);
         const contentType = response.headers.get('content-type');
-        console.log('question.js: content-type:', contentType);
+        // console.log('question.js: content-type:', contentType);
         
         if (contentType && contentType.includes('application/json')) {
             return response.json();
@@ -153,7 +153,7 @@ function handleQuestionSubmit(event) {
         }
     })
     .then(data => {
-        console.log('question.js: 解析到的数据:', data);
+        // console.log('question.js: 解析到的数据:', data);
         
         if (data.success) {
             // ✅ 关键修改：直接更新页面，而不是重新加载
@@ -185,7 +185,7 @@ function handleQuestionSubmit(event) {
 
 // ✅ 新增：直接更新页面UI
 function updateQuestionUI(data) {
-    console.log('question.js: 更新页面UI');
+    // console.log('question.js: 更新页面UI');
     
     // 1. 显示结果消息
     showResultMessage(data);
@@ -470,7 +470,7 @@ function handleRedirect(response) {
     // 比如显示登录模态框或跳转到登录页面
     if (response.url.includes('/login')) {
         // 可以在这里触发登录模态框
-        console.log('需要登录');
+        // console.log('需要登录');
         return Promise.reject(new Error('请先登录'));
     }
     
@@ -479,7 +479,7 @@ function handleRedirect(response) {
 
 // 更新导航按钮
 function updateNavigationButtons(data) {
-    console.log('question.js: 更新导航按钮，数据:', data);
+    // console.log('question.js: 更新导航按钮，数据:', data);
     
     const actionsDiv = document.querySelector('.question-actions');
     if (!actionsDiv) {
@@ -535,7 +535,7 @@ function updateNavigationButtons(data) {
 
 // 创建初始导航按钮（页面加载时调用）
 function createInitialNavigationButtons() {
-    console.log('question.js: 创建初始导航按钮');
+    // console.log('question.js: 创建初始导航按钮');
     
     // 从当前URL获取参数
     const urlParams = new URLSearchParams(window.location.search);
@@ -548,7 +548,7 @@ function createInitialNavigationButtons() {
     if (pathParts.length >= 5) {
         const qid = pathParts[2]; // questions/后的第一个参数
         
-        console.log('question.js: 解析到的参数:', {mode, qid});
+        // console.log('question.js: 解析到的参数:', {mode, qid});
         
         // 从服务器获取题目信息（使用新的URL格式）
         fetchQuestionInfo(mode, qid);
@@ -557,7 +557,7 @@ function createInitialNavigationButtons() {
 
 // 从服务器获取题目信息
 function fetchQuestionInfo(mode, qid) {
-    console.log('question.js: 获取题目信息');
+    // console.log('question.js: 获取题目信息');
     
     fetch(`/questions/${qid}?mode=${encodeURIComponent(mode)}`, {
         headers: {
@@ -568,7 +568,7 @@ function fetchQuestionInfo(mode, qid) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            console.log('question.js: 获取到的题目信息:', data);
+            // console.log('question.js: 获取到的题目信息:', data);
             // 更新导航按钮
             updateNavigationButtons(data);
         }
@@ -609,7 +609,7 @@ function showCommentsSection() {
             const pageTitle = commentsContainer.getAttribute('data-page-title') || document.title;
             
             if (pageKey) {
-                console.log('question.js: 使用ArtalkManager显示评论区 pageKey=', pageKey);
+                // console.log('question.js: 使用ArtalkManager显示评论区 pageKey=', pageKey);
                 window.ArtalkManager.showComments(pageKey, pageTitle);
             } else {
                 console.warn('question.js: 未找到pageKey属性');
@@ -630,7 +630,7 @@ function checkForExistingAnswer() {
 
 // 监听AJAX页面更新事件
 window.addEventListener('ajax:page:updated', function() {
-    console.log('question.js: 检测到页面更新，重新初始化');
+    // console.log('question.js: 检测到页面更新，重新初始化');
     setTimeout(() => {
         initQuestionPage();
         initFavoriteButtons();

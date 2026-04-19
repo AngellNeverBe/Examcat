@@ -40,6 +40,7 @@ class AjaxNavigator {
                     '/static/js/base.js',
                     '/static/js/ajax_navigator.js',
                     '/static/js/ajax_nav_activator.js',
+                    '/static/js/artalk-manager.js',
                     '/static/js/index.js',
                     '/npm/live2d-widgets@1.0.0/dist/autoload.js',
                     '/ajax/libs/artalk/2.9.1/Artalk.js',
@@ -370,7 +371,7 @@ class AjaxNavigator {
         
         switch(level) {
             case 'info':
-                console.log(`${prefix} ${message}`);
+                // console.log(`${prefix} ${message}`);
                 break;
             case 'warn':
                 console.warn(`${prefix} ${message}`);
@@ -379,7 +380,7 @@ class AjaxNavigator {
                 console.error(`${prefix} ${message}`);
                 break;
             default:
-                console.log(`${prefix} ${message}`);
+                // console.log(`${prefix} ${message}`);
         }
     }
 
