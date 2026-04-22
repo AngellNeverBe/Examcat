@@ -198,7 +198,7 @@
                                             <tr>
                                                 <td>
                                                     <span class="badge badge-info">
-                                                        {{ stat.type }}
+                                                        {{ stat.type | truncate(6) }}
                                                     </span>
                                                 </td>
                                                 <td>{{ stat.total }}</td>
@@ -246,7 +246,13 @@
                                             {% for stat in category_stats %}
                                             <tr>
                                                 <td>
-                                                    <span class="badge badge-primary">{{ stat.category }}</span>
+                                                    <span class="badge badge-primary">
+                                                    {% if stat.category|length > 6 %}
+                                                        {{ stat.category[:6] }}...
+                                                    {% else %}
+                                                        {{ stat.category }}
+                                                    {% endif %}
+                                                    </span>
                                                 </td>
                                                 <td>{{ stat.total }}</td>
                                                 <td>{{ stat.correct }}</td>

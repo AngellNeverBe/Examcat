@@ -86,8 +86,8 @@ def fetch_all_banks(user_id: int) -> List[Dict[str, Any]]:
             COALESCE(SUM(CASE WHEN h.complete = 1 AND h.correct = 0 THEN 1 ELSE 0 END), 0) as wrong_count
         FROM banks b
         LEFT JOIN history h ON b.id = h.bank_id AND h.user_id = ?
-        GROUP BY b.id, b.bankname, b.type, b.category, b.total_count, b.category_count
-        ORDER BY b.category, b.bankname
+        GROUP BY b.id, b.bankname, b.type, b.category, b.total_count, b.category_count, b.created_at
+        ORDER BY b.created_at DESC
     ''', (user_id,))
 
     all_categories = ['大一', '大二', '大三', '大四', '大五', '其他']

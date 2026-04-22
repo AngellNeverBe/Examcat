@@ -151,11 +151,13 @@ def get_banks_data(user_id, category=None):
             if bank['id'] == current_bank_id:
                 active_category = bank['category']
                 break
-
+    
     # 过滤题库（如果指定了分类）
     filtered_banks = banks
     if category and category in all_categories:
         filtered_banks = [bank for bank in banks if bank['category'] == category]
+    else:
+        filtered_banks = [bank for bank in banks if bank['category'] == active_category]
 
     # 按分类分组（过滤后的题库）
     banks_by_category = {cat: [] for cat in all_categories}

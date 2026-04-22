@@ -14,7 +14,7 @@ banks_bp = Blueprint('banks', __name__, template_folder='../templates/base')
 @login_required
 def banks():
     """Route to banks."""
-    user_id = get_user_id()
+    user_id = get_user_id()    
     data = get_banks_data(user_id)
     return render_template('banks.html', **data)
 

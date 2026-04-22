@@ -212,13 +212,16 @@ function showResultMessage(data) {
     const existingMessages = document.querySelectorAll('.result-message, .alert');
     existingMessages.forEach(msg => msg.remove());
     
+    // 精确判断是否正确（避免正确答案文本中包含“正确”二字时的误判）
+    const isCorrect = data.result_msg === "回答正确" || data.result_msg.startsWith("回答正确");
+    
     // 创建结果消息
     const resultDiv = document.createElement('div');
-    resultDiv.className = data.result_msg.includes('正确') ? 
+    resultDiv.className = isCorrect ? 
         'result-message result-correct' : 'result-message result-incorrect';
     
     const icon = document.createElement('i');
-    icon.className = data.result_msg.includes('正确') ? 
+    icon.className = isCorrect ? 
         'fas fa-check-circle' : 'fas fa-times-circle';
     
     resultDiv.appendChild(icon);

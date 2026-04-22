@@ -26,12 +26,17 @@
             {% else %}
                 <span class="badge badge-secondary">其他模式</span>
             {% endif %}
-            {% if question.type %}
+
+            {% if question.type2 %}
+                <span class="badge badge-info">{{ question.type2 }}</span>
+            {% elif question.type %}
                 <span class="badge badge-info">{{ question.type }}</span>
             {% endif %}
+
             {% if question.category %}
                 <span class="badge badge-primary">{{ question.category }}</span>
             {% endif %}
+
             {% if (completed or result_msg) and stats %}
                 <span class="question-stats">
                     本题总共回答<span class="stats-number"> {{ stats.total_answered }} </span>次，
@@ -66,8 +71,8 @@
     <!-- 答题结果消息 -->
     {% if completed or result_msg %}
         {% if result_msg %}
-            <div class="result-message {% if '正确' in result_msg %}result-correct{% else %}result-incorrect{% endif %}">
-                {% if '正确' in result_msg %}
+            <div class="result-message {% if result_msg == '回答正确' %}result-correct{% else %}result-incorrect{% endif %}">
+                {% if result_msg == '回答正确' %}
                     <i class="fas fa-check-circle"></i>
                 {% else %}
                     <i class="fas fa-times-circle"></i>
