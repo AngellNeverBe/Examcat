@@ -50,33 +50,62 @@ def get_user_id() -> int:
 def validate_username(username: str) -> Tuple[bool, str]:
     """
     验证用户名是否有效
-    
+
     Args:
         username: 用户名
-    
+
     Returns:
         (是否有效, 错误信息)
     """
-    # 检查是否尝试注册管理员账号        
+    # 检查是否尝试注册管理员账号
     if not username:
         return False, "用户名不能为空"
-    
+
     if username == 'admin':
         return False, "不能注册管理员账号"
-    
+
     if len(username) < 3:
         return False, "用户名长度过短"
-    
+
     if len(username) >30:
         return False, "用户名长度过长"
-    
+
     from .database import get_db
     conn = get_db()
     c = conn.cursor()
     c.execute('SELECT id FROM users WHERE username=?', (username,))
     if c.fetchone():
         return False, "用户名已存在，请更换用户名"
-    
+
+    return True, "用户名有效"
+
+def validate_username_update(username: str, exclude_user_id: int) -> Tuple[bool, str]:
+    """
+    验证修改用户名是否有效（排除当前用户自己）
+
+    Args:
+        username: 新用户名
+        exclude_user_id: 要排除的用户ID（当前用户）
+
+    Returns:
+        (是否有效, 错误信息)
+    """
+    if not username:
+        return False, "用户名不能为空"
+
+    if len(username) < 3:
+        return False, "用户名长度过短"
+
+    if len(username) > 30:
+        return False, "用户名长度过长"
+
+    from .database import get_db
+    conn = get_db()
+    c = conn.cursor()
+    c.execute('SELECT id FROM users WHERE username=? AND id != ?', (username, exclude_user_id))
+    if c.fetchone():
+        return False, "用户名已存在，请更换用户名"
+
     return True, "用户名有效"
 
 def validate_email(email: str) -> Tuple[bool, str]:

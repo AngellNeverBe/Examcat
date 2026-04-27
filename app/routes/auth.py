@@ -5,7 +5,7 @@ import os
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from ..utils.database import get_db, db_logger
-from ..utils.auth import validate_username, validate_email, validate_passward, verify_admin_credentials, ADMIN_CREDENTIALS, login_required
+from ..utils.auth import validate_username, validate_username_update, validate_email, validate_passward, verify_admin_credentials, ADMIN_CREDENTIALS, login_required
 from ..utils.banks import get_current_bank_id
 from ..utils.page_data import get_user_data
 from ..utils.database import get_db, db_logger
@@ -164,3 +164,62 @@ def user_index():
     
     # 渲染用户页面模板，传递所有数据
     return render_template('base/user.html', **data)
+
+@auth_bp.route('/user/update', methods=['POST'])
+@login_required
+def update_profile():
+    """更新用户个人资料（用户名/邮箱）"""
+    user_id = session['user_id']
+    username = request.form.get('username')
+    email = request.form.get('email')
+
+    # 至少需要一个字段
+    if not username and not email:
+        return jsonify({'success': False, 'message': '请提供要修改的用户名或邮箱'})
+
+    # 验证用户名（如果提供了）
+    if username:
+        # 管理员不允许修改用户名
+        if session.get('is_admin'):
+            return jsonify({'success': False, 'message': '管理员不允许修改用户名'})
+
+        if username == session.get('username'):
+            # 与当前用户名相同，无需修改
+            pass
+        else:
+            valid, msg = validate_username_update(username, user_id)
+            if not valid:
+                return jsonify({'success': False, 'message': msg})
+
+    # 验证邮箱（如果提供了）
+    if email:
+        valid, msg = validate_email(email)
+        if not valid:
+            return jsonify({'success': False, 'message': msg})
+
+    # 执行数据库更新
+    conn = get_db()
+    c = conn.cursor()
+
+    updated_fields = []
+
+    if username and username != session.get('username'):
+        c.execute('UPDATE users SET username = ? WHERE id = ?', (username, user_id))
+        session['username'] = username
+        updated_fields.append('用户名')
+        db_logger.info(f"[{os.getpid()}] update_profile: 用户{user_id} 改名 -> {username}")
+
+    if email:
+        c.execute('UPDATE users SET email = ? WHERE id = ?', (email, user_id))
+        session['email'] = email
+        updated_fields.append('邮箱')
+
+    conn.commit()
+
+    if not updated_fields:
+        return jsonify({'success': True, 'message': '资料无需更新'})
+
+    return jsonify({
+        'success': True,
+        'message': f"{'、'.join(updated_fields)}已更新"
+    })

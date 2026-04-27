@@ -387,6 +387,25 @@ def md5_hash(text: str) -> str:
     """
     return hashlib.md5(text.encode('utf-8')).hexdigest()
 
+
+def get_avatar_url(email):
+    """
+    根据邮箱地址生成 WeAvatar 头像 URL（SHA-256 哈希）。
+    遵循 Gravatar 协议：邮箱去除空白并转为小写后取 SHA-256。
+
+    Args:
+        email: 邮箱地址
+
+    Returns:
+        WeAvatar 头像 URL，若邮箱为空则返回空字符串
+    """
+    if not email:
+        return ''
+    email_clean = email.strip().lower()
+    email_hash = hashlib.sha256(email_clean.encode('utf-8')).hexdigest()
+    return f'https://weavatar.com/avatar/{email_hash}?sha256=1&d=mp&s=240'
+
+
 # ============================================================================
 # 验证函数
 # ============================================================================

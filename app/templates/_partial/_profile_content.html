@@ -1,5 +1,5 @@
 <!-- 用户中心内容 (AJAX版本) -->
-<div class="user-profile-container">
+<div class="user-profile-container" data-is-admin="{{ 'true' if session.get('is_admin') else 'false' }}">
     <!-- 两栏布局：侧边栏 + 内容区域 -->
     <div class="user-layout">
         <!-- 左侧固定导航栏 -->
@@ -8,16 +8,15 @@
                 <!-- 用户信息摘要 -->
                 <div class="sidebar-user-info">
                     <div class="user-avatar-large">
-                        <i class="fas fa-user-circle"></i>
+                        <div class="atk-avatar"><img src="{{ avatar_url }}" alt="头像"></div>
                     </div>
                     <div class="user-summary">
                         <h3 class="username">{{ session['username'] }}</h3>
-                        <p class="user-email text-muted">{{ session['email'] }}</p>
                         <div class="user-stats">
                             <span class="stat-item">
-                                <i class="fas fa-id-card"></i> {{ session['user_id'] }}
+                                <i class="fa-solid fa-cat"></i>ID {{ session['user_id'] }}
                             </span>
-                        </div>
+                        </div>             
                     </div>
                 </div>
 
@@ -76,17 +75,33 @@
                     </div>
                     <div class="card-body">
                         <div class="profile-info">
-                            <div class="info-row">
+                            <div class="info-row" data-field="username">
                                 <div class="info-label">用户名</div>
-                                <div class="info-value">{{ session['username'] }}</div>
+                                <div class="info-value">
+                                    <span class="info-text">{{ session['username'] }}</span>
+                                    {% if not session.get('is_admin') %}
+                                    <button type="button" class="btn btn-outline-primary btn-sm edit-btn"
+                                        style="margin-left: 12px; max-height: 10px;"
+                                        data-field="username">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
                             </div>
                             <div class="info-row">
                                 <div class="info-label">用户ID</div>
                                 <div class="info-value">{{ session['user_id'] }}</div>
                             </div>
-                            <div class="info-row">
+                            <div class="info-row" data-field="email">
                                 <div class="info-label">邮箱</div>
-                                <div class="info-value">{{ session['email'] }}</div>
+                                <div class="info-value">
+                                    <span class="info-text">{{ session['email'] }}</span>
+                                    <button type="button" class="btn btn-outline-primary btn-sm edit-btn"
+                                        style="margin-left: 12px; max-height: 10px;"
+                                        data-field="email">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
+                                </div>
                             </div>
                             <div class="info-row">
                                 <div class="info-label">注册时间</div>

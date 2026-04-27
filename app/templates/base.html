@@ -82,11 +82,11 @@
                 <!-- 用户信息区域 -->
                 <div class="user-info-section">
                     <div class="user-avatar">
-                        <i class="fas fa-user-circle"></i>
+                        <div class="atk-avatar"><img src="{{ avatar_url }}" alt="头像"></div>
                     </div>
                     <div class="user-details">
                         <div class="user-name">{{ session['username'] }}</div>
-                        <div class="user-id">ID: {{ session['user_id'] }}</div>
+                        <div class="user-id"><i class="fa-solid fa-cat"></i>ID {{ session['user_id'] }}</div>
                         <div class="user-email">{{ session['email'] }}</div>
                     </div>
                 </div>

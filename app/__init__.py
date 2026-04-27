@@ -50,6 +50,8 @@ def create_app(config_name=None):
     @app.context_processor
     def inject_config_variables():
         """将配置变量注入所有模板"""
+        from flask import session
+        from .utils.helpers import get_avatar_url
         return {
             'config': app.config,  # 注入整个config对象
             'app_title': app.config.get('TITLE', 'Examcat'),
@@ -58,6 +60,7 @@ def create_app(config_name=None):
             'atk_server': app.config.get('ARTALK_SERVER'),
             'atk_site': app.config.get('ARTALK_SITE_NAME'),
             'atk_locale': app.config.get('ARTALK_LOCALE', 'zh-CN'),
+            'avatar_url': get_avatar_url(session.get('email', '')),
         }
     
     return app

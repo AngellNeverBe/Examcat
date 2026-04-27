@@ -18,4 +18,4 @@ if __name__ == '__main__':
         print("当前系统将优先使用questions-bank/文件夹中的题库")
     
     # 运行应用
-    app.run(host="localhost", debug=True, port=32220)
+    app.run(host="localhost", debug=True, port=5000)

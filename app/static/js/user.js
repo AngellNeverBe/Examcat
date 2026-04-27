@@ -7,6 +7,7 @@ class UserProfile {
         this.initialized = false;
         this.handleSidebarNavClick = this.handleSidebarNavClick.bind(this);
         this.handleUserContentClick = this.handleUserContentClick.bind(this);
+        this.handleUserContentSubmit = this.handleUserContentSubmit.bind(this);
         this.activateTabFromHash = this.activateTabFromHash.bind(this);
         this.handleAjaxPageUpdated = this.handleAjaxPageUpdated.bind(this);
         this.init();
@@ -70,6 +71,7 @@ class UserProfile {
         const userContent = document.querySelector('.user-content');
         if (userContent && userContent.dataset.buttonEventsBound) {
             userContent.removeEventListener('click', this.handleUserContentClick);
+            userContent.removeEventListener('submit', this.handleUserContentSubmit);
             delete userContent.dataset.buttonEventsBound;
         }
         
@@ -218,6 +220,8 @@ class UserProfile {
         
         // 使用事件委托处理用户内容区域的点击事件
         userContent.addEventListener('click', this.handleUserContentClick);
+        // 同时处理表单提交事件（行内编辑）
+        userContent.addEventListener('submit', this.handleUserContentSubmit);
         userContent.dataset.buttonEventsBound = 'true';
     }
     
@@ -225,6 +229,22 @@ class UserProfile {
      * 处理用户内容区域点击事件
      */
     handleUserContentClick(e) {
+        // 行内编辑按钮
+        const editBtn = e.target.closest('.edit-btn');
+        if (editBtn) {
+            e.preventDefault();
+            this.startEdit(editBtn.dataset.field);
+            return;
+        }
+
+        // 取消编辑按钮
+        const cancelBtn = e.target.closest('.cancel-btn');
+        if (cancelBtn) {
+            e.preventDefault();
+            this.cancelEdit(cancelBtn);
+            return;
+        }
+
         // 编辑资料按钮
         const editProfileBtn = e.target.closest('.profile-actions .btn-primary');
         if (editProfileBtn) {
@@ -266,6 +286,159 @@ class UserProfile {
         }
     }
     
+    /**
+     * 处理用户内容区域表单提交事件（行内编辑）
+     */
+    handleUserContentSubmit(e) {
+        const editForm = e.target.closest('.edit-form');
+        if (!editForm) return;
+
+        e.preventDefault();
+        const field = editForm.dataset.field;
+        const input = editForm.querySelector('.edit-input');
+        const value = input.value.trim();
+        this.submitEdit(editForm, field, value);
+    }
+
+    /**
+     * 开始行内编辑
+     * @param {string} field - 字段名（'username' 或 'email'）
+     */
+    startEdit(field) {
+        var row = document.querySelector('.info-row[data-field="' + field + '"]');
+        if (!row) return;
+        var infoValue = row.querySelector('.info-value');
+        var currentText = infoValue.querySelector('.info-text').textContent.trim();
+        var isEmail = (field === 'email');
+
+        var formHtml = '<form class="edit-form d-inline-flex align-items-center" data-field="' + field + '" ' +
+            'data-original-text="' + this.escapeHtml(currentText) + '">' +
+            '<input type="' + (isEmail ? 'email' : 'text') + '" class="form-control form-control-sm edit-input" ' +
+            'value="' + this.escapeHtml(currentText) + '" ' +
+            'style="width: ' + (isEmail ? '220px' : '150px') + '; min-height: 20px; padding: 0px 10px;" ' +
+            'required>' +
+            '<button type="submit" class="btn btn-outline-primary btn-sm" ' +
+            'style="max-height: 10px; margin-left: 6px;">' +
+            '<i class="fas fa-save"></i></button>' +
+            '<button type="button" class="btn btn-outline-secondary btn-sm cancel-btn" ' +
+            'style="max-height: 10px; margin-left: 4px;">' +
+            '<i class="fas fa-times"></i></button>' +
+            '<span class="edit-error text-danger" style="display:none; margin-left: 8px; font-size: 0.85rem;"></span>' +
+            '</form>';
+
+        infoValue.innerHTML = formHtml;
+
+        var input = infoValue.querySelector('.edit-input');
+        input.focus();
+        input.select();
+    }
+
+    /**
+     * 取消行内编辑，恢复显示模式
+     * @param {HTMLElement} cancelBtn - 取消按钮元素
+     */
+    cancelEdit(cancelBtn) {
+        var form = cancelBtn.closest('.edit-form');
+        var field = form.dataset.field;
+        var originalText = form.dataset.originalText;
+        var infoValue = form.parentElement;
+
+        var container = document.querySelector('.user-profile-container');
+        var isAdmin = container && container.dataset.isAdmin === 'true';
+
+        var html = '<span class="info-text">' + this.escapeHtml(originalText) + '</span>';
+        if (!(field === 'username' && isAdmin)) {
+            html += '<button type="button" class="btn btn-outline-primary btn-sm edit-btn" ' +
+                'style="margin-left: 12px; max-height: 10px;" data-field="' + field + '">' +
+                '<i class="fas fa-pen"></i></button>';
+        }
+        infoValue.innerHTML = html;
+    }
+
+    /**
+     * 提交编辑到后端
+     * @param {HTMLFormElement} form - 编辑表单
+     * @param {string} field - 字段名
+     * @param {string} value - 新值
+     */
+    submitEdit(form, field, value) {
+        if (!value) {
+            this.showEditError(form, '内容不能为空');
+            return;
+        }
+
+        var self = this;
+        var formData = new FormData();
+        formData.append(field, value);
+
+        fetch('/user/update', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            if (data.success) {
+                // 更新 originalText 为新值，确保 cancelEdit 显示正确
+                form.dataset.originalText = value;
+                self.cancelEdit(form.querySelector('.cancel-btn'));
+                self.updateSidebar(field, value);
+            } else {
+                self.showEditError(form, data.message || '更新失败');
+            }
+        })
+        .catch(function() {
+            self.showEditError(form, '网络错误，请重试');
+        });
+    }
+
+    /**
+     * 显示编辑错误提示
+     * @param {HTMLFormElement} form - 编辑表单
+     * @param {string} msg - 错误消息
+     */
+    showEditError(form, msg) {
+        var errEl = form.querySelector('.edit-error');
+        if (errEl) {
+            errEl.textContent = msg;
+            errEl.style.display = 'inline';
+        }
+    }
+
+    /**
+     * 同步更新侧边栏的用户名/邮箱显示
+     * @param {string} field - 字段名
+     * @param {string} value - 新值
+     */
+    updateSidebar(field, value) {
+        if (field === 'username') {
+            var el = document.querySelector('.sidebar-user-info .username');
+            if (el) el.textContent = value;
+            // 同步更新导航栏下拉菜单中的用户名（触发按钮 + 详情区）
+            var dropdownNames = document.querySelectorAll('.user-trigger .user-name, .user-details .user-name');
+            dropdownNames.forEach(function(el) { el.textContent = value; });
+        } else if (field === 'email') {
+            var el = document.querySelector('.sidebar-user-info .user-email');
+            if (el) el.textContent = value;
+            // 同步更新导航栏下拉菜单中的邮箱
+            var dropdownEmail = document.querySelector('.user-details .user-email');
+            if (dropdownEmail) dropdownEmail.textContent = value;
+        }
+    }
+
+    /**
+     * HTML 转义（防 XSS）
+     * @param {string} text - 原始文本
+     * @returns {string} 转义后的文本
+     */
+    escapeHtml(text) {
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(text));
+        return div.innerHTML;
+    }
+
     /**
      * 初始化个人资料标签页
      */
@@ -354,9 +527,14 @@ window.addEventListener('ajax:page:updated', function(event) {
     // 如果是用户页面
     if (page === 'user') {
         // console.log('检测到用户页面更新，确保 UserProfile 正确初始化');
-        
-        // 确保 UserProfile 实例存在
-        if (!window.userProfile) {
+
+        // 强制重新初始化：AJAX 导航切换页面后 DOM 已刷新，
+        // 必须清理旧实例的事件绑定，重新绑定到新 DOM 元素
+        if (window.userProfile && window.userProfile.initialized) {
+            // console.log('UserProfile 已存在，强制重新初始化');
+            window.userProfile.cleanup();
+            window.userProfile.init();
+        } else if (!window.userProfile) {
             // console.log('UserProfile 实例不存在，创建新实例');
             try {
                 window.userProfile = new UserProfile();
@@ -364,23 +542,9 @@ window.addEventListener('ajax:page:updated', function(event) {
                 console.error('创建 UserProfile 实例失败:', error);
                 return;
             }
-        }
-        
-        // 检查是否在用户页面容器中
-        const userProfileContainer = document.querySelector('.user-profile-container');
-        if (!userProfileContainer) {
-            // console.log('用户页面容器未找到，可能不在用户页面');
-            return;
-        }
-        
-        // 检查 UserProfile 是否已初始化
-        if (!window.userProfile.initialized) {
-            // console.log('UserProfile 未初始化，调用 init()');
+        } else {
+            // initialized 为 false，调用 init
             window.userProfile.init();
-        }
-        // 如果已初始化，确保事件监听器已设置
-        else {
-            // console.log('UserProfile 已初始化');
         }
     }
 });

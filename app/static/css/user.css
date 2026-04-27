@@ -55,6 +55,7 @@
 .sidebar-user-info {
     text-align: center;
     padding-bottom: 1rem;
+    margin-top: 1rem;
     margin-bottom: 1.2rem;
     border-bottom: 1px solid var(--gray-300);
     display: flex;
@@ -68,13 +69,14 @@
 .user-avatar-large {
     width: 80px;
     height: 80px;
-    background-color: var(--primary-color-light);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--primary-color);
-    font-size: 2.5rem;
+    border-radius: 5%;
+    overflow: hidden;
+}
+.user-avatar-large .atk-avatar img {
+    width: 80px;
+    height: 80px;
+    border-radius: 5%;
+    display: block;
 }
 
 .user-summary .username {
@@ -215,7 +217,7 @@
 
 .info-value {
     flex: 1;
-    color: var(--gray-800);
+    color: var(--gray-600);
 }
 
 .profile-actions {

@@ -182,9 +182,11 @@ nav.nav-solid {
 .user-avatar {
     margin-right: 0.75rem;
 }
-.user-avatar .fa-user-circle {
-    font-size: 3rem;
-    color: var(--gray-700);
+.user-avatar .atk-avatar img {
+    width: 48px;
+    height: 48px;
+    border-radius: 5%;
+    display: block;
 }
 .user-details {
     flex: 1;
